@@ -1,0 +1,895 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2f4d6e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Plan Cierre">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<title>Plan Cierre</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: app de trabajo diario. Franja de meta fija arriba, pestañas: Hoy (rutina bloqueada paso a paso), Tablero, Oportunidades, Negocio nuevo, Sincronización, Método */
+:root{
+  --bg:#f3f4f6; --panel:#ffffff; --ink:#18202b; --muted:#5b6574; --line:#dde1e7;
+  --accent:#d98a00; --accent-soft:#fdf1da; --steel:#2f4d6e; --steel-soft:#e3eaf2;
+  --good:#1f7a4d; --good-soft:#e2f2e9; --warn:#a85d00; --warn-soft:#fbecd6; --bad:#b0352b; --bad-soft:#f8e1de;
+  --f-display:"Barlow Condensed","Arial Narrow",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161d; --panel:#19212b; --ink:#e7ebf0; --muted:#9aa5b3; --line:#2b3542;
+  --accent:#f0a623; --accent-soft:#3a2c12; --steel:#8fb2d8; --steel-soft:#1f2c3b;
+  --good:#5cc391; --good-soft:#163428; --warn:#f0b35a; --warn-soft:#3a2a14; --bad:#ef7a6e; --bad-soft:#3d1e1b; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161d; --panel:#19212b; --ink:#e7ebf0; --muted:#9aa5b3; --line:#2b3542;
+  --accent:#f0a623; --accent-soft:#3a2c12; --steel:#8fb2d8; --steel-soft:#1f2c3b;
+  --good:#5cc391; --good-soft:#163428; --warn:#f0b35a; --warn-soft:#3a2a14; --bad:#ef7a6e; --bad-soft:#3d1e1b; color-scheme:dark}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding-block:16px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+h1,h2,h3{font-family:var(--f-display);font-weight:600;letter-spacing:.01em;text-wrap:balance;margin:0}
+h1{font-size:1.9rem;line-height:1.05}
+h2{font-size:1.2rem;text-transform:uppercase;letter-spacing:.04em}
+h3{font-size:1.08rem}
+p{margin:0}
+.eyebrow{font-size:.72rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)} .sub{font-size:.78rem;color:var(--muted)}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:14px}
+.head-l{display:grid;gap:4px;min-width:0}
+.status{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.78rem;color:var(--muted)}
+.status span{display:inline-flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:var(--muted)}
+.dot.ok{background:var(--good)} .dot.wait{background:var(--warn)} .dot.err{background:var(--bad)}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.st{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:grid;gap:2px}
+.st .v{font-family:var(--f-display);font-size:1.6rem;font-weight:700;line-height:1.05}
+.st .v small{font-size:.55em;font-weight:500}
+.st.hot{border-color:var(--accent);background:var(--accent-soft)} .st.hot .v{color:var(--warn)}
+.st.ok .v{color:var(--good)}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:5;padding-top:4px}
+nav.tabs button{font:inherit;font-weight:600;font-size:.9rem;border:0;background:transparent;color:var(--muted);padding:10px 14px;border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--accent)}
+nav.tabs .badge{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--bad);color:#fff;font-size:.7rem;line-height:18px;text-align:center}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 8px}
+textarea{width:100%;min-height:64px;resize:vertical}
+input[type=number]{font-family:var(--f-mono)}
+input:focus-visible,select:focus-visible,button:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+input:disabled,select:disabled,textarea:disabled,button:disabled{opacity:.55;cursor:not-allowed}
+.field{display:grid;gap:4px}
+.field>label,.flabel{font-size:.7rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.btn{font:inherit;font-size:.82rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:6px 11px;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--steel)}
+.btn.primary{background:var(--steel);border-color:var(--steel);color:var(--panel);font-weight:600}
+.btn.danger{color:var(--bad)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--panel)}
+.seg button{font:inherit;font-size:.82rem;border:0;background:transparent;color:var(--muted);padding:6px 11px;cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--steel);color:var(--panel);font-weight:600}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:18px;min-width:0}
+.ph{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:12px}
+.ph p{color:var(--muted);font-size:.84rem}
+.banner{border:1px solid var(--warn);background:var(--warn-soft);border-radius:8px;padding:10px 14px;font-size:.85rem}
+.banner.bad{border-color:var(--bad);background:var(--bad-soft)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:980px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.stack{display:grid;gap:18px;min-width:0}
+/* rutina */
+.day-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:center}
+.progress{height:8px;border-radius:4px;background:var(--steel-soft);overflow:hidden;min-width:160px;flex:1;max-width:340px}
+.progress span{display:block;height:100%;background:var(--good)}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.step{border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.step>.sh{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;padding:12px 16px}
+.step .n{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;font-size:1.1rem;background:var(--steel-soft);color:var(--steel)}
+.step.done .n{background:var(--good);color:var(--panel)}
+.step.cur{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.step.cur .n{background:var(--accent);color:var(--panel)}
+.step.locked{opacity:.6}
+.step .sb{padding:0 16px 16px 58px;display:grid;gap:12px}
+@media (max-width:560px){.step .sb{padding-left:16px}}
+.step .why{font-size:.82rem;color:var(--muted);max-width:75ch}
+.chk{display:flex;gap:10px;align-items:flex-start}
+.chk input{width:18px;height:18px;margin-top:2px;flex:none}
+.task{border:1px solid var(--line);border-radius:6px;padding:10px 12px;display:grid;gap:8px}
+.task.ok{border-color:var(--good);background:var(--good-soft)}
+.task .tt{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.task .t{font-weight:600}
+.res{display:flex;flex-wrap:wrap;gap:6px}
+.res button{font:inherit;font-size:.78rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:14px;padding:4px 10px;cursor:pointer}
+.res button[aria-pressed=true]{background:var(--steel);border-color:var(--steel);color:var(--panel)}
+.row2{display:grid;grid-template-columns:minmax(0,1fr) 150px;gap:8px}
+@media (max-width:560px){.row2{grid-template-columns:1fr}}
+.row2 input{width:100%}
+.lesson-card{border-left:4px solid var(--accent);padding:4px 0 4px 12px;display:grid;gap:6px}
+.vids{display:flex;flex-wrap:wrap;gap:8px}
+.vid{display:inline-flex;gap:8px;align-items:center;border:1px solid var(--line);border-radius:6px;padding:6px 10px;text-decoration:none;color:var(--ink);font-size:.82rem;background:var(--panel)}
+.vid:hover{border-color:var(--bad)}
+.vid .play{width:0;height:0;border-left:9px solid var(--bad);border-top:6px solid transparent;border-bottom:6px solid transparent}
+.list{display:grid;gap:10px;margin:0;padding:0;list-style:none}
+.todo li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;font-size:.86rem}
+.chip{display:inline-block;font-size:.66rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:var(--steel-soft);color:var(--steel);white-space:nowrap}
+.chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.good{background:var(--good-soft);color:var(--good)}
+.score{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.score div{border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.score b{display:block;font-family:var(--f-display);font-size:1.4rem}
+.week{display:flex;gap:6px}
+.week span{flex:1;text-align:center;font-size:.7rem;padding:6px 0;border-radius:4px;background:var(--steel-soft);color:var(--muted)}
+.week span.full{background:var(--good);color:var(--panel)} .week span.part{background:var(--warn-soft);color:var(--warn)} .week span.today{outline:2px solid var(--accent)}
+/* tablero */
+.bar{height:30px;border-radius:5px;background:var(--steel-soft);display:flex;overflow:hidden}
+.bar span{height:100%}
+.c-won{background:var(--good)} .c-mark{background:color-mix(in srgb,var(--good) 55%,var(--panel))} .c-wt{background:var(--steel)} .c-new{background:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.8rem;color:var(--muted);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.chart svg{width:100%;height:auto;display:block}
+.chart text{fill:var(--muted);font-family:var(--f-mono);font-size:10px}
+.controls{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.w-meta{width:110px}
+/* tabla */
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.tbl-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:960px}
+th{font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;font-weight:600;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th button{all:unset;cursor:pointer} th button:focus-visible{outline:2px solid var(--accent)} th button[aria-pressed=true]{color:var(--ink)}
+td{padding:9px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+td.r,th.r{text-align:right}
+tr.is-won td{background:var(--good-soft)} tr.is-lost td{opacity:.5}
+.det{font-weight:500}
+.act{display:grid;grid-template-columns:minmax(0,1fr) 128px auto;gap:6px;margin-top:6px;align-items:center}
+.act input{min-width:0;font-size:.82rem;padding:4px 7px}
+.act .when{font-size:.7rem;color:var(--muted);white-space:nowrap}
+td select,td input[type=number],td input[type=date]{padding:4px 6px;font-size:.8rem}
+td input[type=number]{width:58px} td input[type=date]{width:128px}
+.est{font-style:italic;color:var(--muted)}
+.small-tbl{min-width:640px}
+/* negocio nuevo */
+.lever{border:1px solid var(--line);border-radius:6px;padding:12px;display:grid;gap:8px}
+.lv-head{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.meter{height:6px;border-radius:3px;background:var(--steel-soft);overflow:hidden}
+.meter span{display:block;height:100%;background:var(--accent)}
+.nitem{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;font-size:.82rem;padding:6px 0;border-top:1px solid var(--line)}
+.nitem .t{font-weight:500;overflow-wrap:anywhere}
+.nform{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.nform .full{grid-column:1/-1}
+.nform input,.nform select{width:100%}
+.confirm{display:inline-flex;gap:6px;align-items:center;font-size:.78rem}
+.alerts li{border-left:3px solid var(--warn);padding:2px 0 2px 10px;font-size:.85rem}
+/* método */
+.lessons{display:grid;gap:14px}
+.lesson{border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px;background:var(--panel)}
+.lesson ul{margin:0;padding-left:18px;display:grid;gap:4px;max-width:80ch}
+.lesson .apply{background:var(--accent-soft);border-radius:6px;padding:10px 12px;font-size:.88rem}
+.foot{font-size:.78rem;color:var(--muted);display:grid;gap:4px}
+.foot p{max-width:115ch}
+[role=tabpanel]{display:grid;gap:18px}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:no-preference){.bar span,.meter span,.progress span{transition:width .35s ease}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <div class="head-l">
+      <span class="eyebrow">INERCOP · Telecomunicaciones · KAM M. Vera</span>
+      <h1>Plan de cierre al 20 de diciembre</h1>
+      <div class="status" id="srcStatus"></div>
+    </div>
+    <div class="status"><button class="btn" id="refresh" type="button">Sincronizar ahora</button><button class="btn" id="openSetup" type="button">Configuración</button></div>
+  </header>
+
+  <div class="banner" id="saveBanner" hidden></div>
+  <section class="panel" id="setup" hidden>
+    <div class="ph"><h2>Conectar la app</h2><button class="btn" type="button" id="closeSetup">Cerrar</button></div>
+    <p class="sub" style="margin-bottom:10px">La forma fácil es abrir en este equipo el enlace "Configurar Plan de Cierre" que te llegó por correo. Si prefieres, pega aquí los dos datos que aparecen en Apps Script.</p>
+    <form id="setupForm" class="nform" autocomplete="off">
+      <div class="field full"><label for="sApi">Dirección de la aplicación web (termina en /exec)</label><input id="sApi" inputmode="url" placeholder="https://script.google.com/macros/s/…/exec"></div>
+      <div class="field full"><label for="sKey">Clave de la app</label><input id="sKey" placeholder="40 caracteres"></div>
+      <div class="full"><button class="btn primary" type="submit">Conectar</button> <span class="sub" id="setupMsg"></span></div>
+    </form>
+  </section>
+
+  <section class="strip" id="strip" aria-label="Meta"></section>
+
+  <nav class="tabs" role="tablist" aria-label="Secciones">
+    <button role="tab" id="t-hoy" aria-controls="p-hoy" data-tab="hoy">Hoy</button>
+    <button role="tab" id="t-tablero" aria-controls="p-tablero" data-tab="tablero">Tablero</button>
+    <button role="tab" id="t-ops" aria-controls="p-ops" data-tab="ops">Oportunidades</button>
+    <button role="tab" id="t-nuevo" aria-controls="p-nuevo" data-tab="nuevo">Negocio nuevo</button>
+    <button role="tab" id="t-sync" aria-controls="p-sync" data-tab="sync">Sincronización</button>
+    <button role="tab" id="t-metodo" aria-controls="p-metodo" data-tab="metodo">Método</button>
+  </nav>
+
+  <!-- HOY -->
+  <section role="tabpanel" id="p-hoy" aria-labelledby="t-hoy">
+    <div class="grid2">
+      <div class="stack">
+        <div class="panel">
+          <div class="day-head">
+            <div><span class="eyebrow" id="dayLabel"></span><h2 style="margin-top:2px">Rutina de hoy</h2></div>
+            <div class="progress" role="img" aria-label="Avance de la rutina"><span id="dayBar"></span></div>
+            <span class="sub num" id="dayPct"></span>
+          </div>
+          <p class="sub" style="margin-top:8px">Cada paso se desbloquea cuando terminas el anterior. Ninguna oportunidad queda cerrada sin un resultado y un próximo paso con fecha.</p>
+        </div>
+        <ol class="steps" id="steps"></ol>
+      </div>
+      <div class="stack">
+        <section class="panel">
+          <div class="ph"><h2>Tareas con fecha</h2><p id="todoNote"></p></div>
+          <ul class="list todo" id="todo"></ul>
+        </section>
+        <section class="panel">
+          <div class="ph"><h2>Tu semana</h2><p id="streak"></p></div>
+          <div class="week" id="week"></div>
+          <div class="score" id="score" style="margin-top:12px"></div>
+        </section>
+        <section class="panel">
+          <div class="ph"><h2>Avisos</h2></div>
+          <p class="sub">Cada día hábil a las 8:10 te llega un correo con las tareas del día y a las 17:40 otro con lo que falte de la rutina.</p><p class="sub" id="notifNote" style="margin-top:8px"></p><button class="btn" type="button" id="notifBtn" style="margin-top:8px">Activar avisos en este equipo</button>
+        </section>
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLERO -->
+  <section role="tabpanel" id="p-tablero" aria-labelledby="t-tablero" hidden>
+    <section class="panel">
+      <div class="ph"><h2>Meta</h2></div>
+      <div class="controls">
+        <div class="field"><label for="meta">Meta (MM$)</label><input id="meta" class="w-meta" type="number" min="0" step="10" value="900"></div>
+        <div class="field"><span class="flabel" id="lblMode">La meta se mide como</span>
+          <div class="seg" role="group" aria-labelledby="lblMode"><button type="button" id="mNew" aria-pressed="true">Cierres nuevos</button><button type="button" id="mAcc" aria-pressed="false">Acumulado 2026</button></div></div>
+        <div class="field"><span class="flabel" id="lblBase">Ganado 2026 según</span>
+          <div class="seg" role="group" aria-labelledby="lblBase"><button type="button" id="bPip" aria-pressed="true">Pipeline</button><button type="button" id="bMon" aria-pressed="false">monday</button></div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>Cobertura de la meta</h2><p id="barNote"></p></div>
+      <div class="bar" id="bar" role="img" aria-label="Cobertura de la meta"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section class="panel chart">
+      <div class="ph"><h2>Pronóstico semana a semana</h2><p>MM$ esperados por semana de cierre</p></div>
+      <div id="fcChart"></div>
+      <p style="margin-top:8px;font-size:.85rem" id="fcNote"></p>
+    </section>
+    <div class="grid2">
+      <section class="panel"><div class="ph"><h2>Revisar en el pipeline</h2></div><ul class="list alerts" id="alerts"></ul></section>
+      <section class="panel chart"><div class="ph"><h2>Ganado 2026 por mes</h2><p>MM$</p></div><div id="chart"></div></section>
+    </div>
+  </section>
+
+  <!-- OPORTUNIDADES -->
+  <section role="tabpanel" id="p-ops" aria-labelledby="t-ops" hidden>
+    <section class="panel">
+      <div class="ph"><h2>Oportunidades abiertas</h2>
+        <div class="filters">
+          <select id="fCli" aria-label="Filtrar por cliente"></select>
+          <select id="fEst" aria-label="Filtrar por estado"><option value="all">Todas</option><option value="OFERTADA">Ofertadas</option><option value="PRESUPUESTO">Presupuesto</option><option value="cold">Solo frías (+60 días)</option><option value="noact">Sin próxima acción</option></select>
+        </div></div>
+      <p class="sub" style="margin:0 0 10px">Estado, probabilidad y fechas se guardan aquí y no modifican el pipeline ni monday. Fechas en cursiva son estimadas por regla.</p>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>PPTO</th><th>Oportunidad · próxima acción · para cuándo</th><th>Cliente</th>
+          <th class="r"><button type="button" data-sort="v">Monto</button></th><th class="r">Mg</th><th class="r">Prob %</th>
+          <th class="r"><button type="button" data-sort="ev">Esperado</button></th><th class="r"><button type="button" data-sort="eu">Utilidad esp.</button></th>
+          <th class="r"><button type="button" data-sort="age">Días</button></th><th><button type="button" data-sort="fc">Cierre est.</button></th><th>Estado</th></tr></thead>
+        <tbody id="rows"></tbody></table></div>
+      <p class="sub" id="rowsNote" style="margin-top:10px"></p>
+    </section>
+  </section>
+
+  <!-- NEGOCIO NUEVO -->
+  <section role="tabpanel" id="p-nuevo" aria-labelledby="t-nuevo" hidden>
+    <div class="grid2">
+      <section class="panel"><div class="ph"><h2>Palancas</h2><p id="newTotal"></p></div><div class="list" id="levers"></div></section>
+      <section class="panel">
+        <div class="ph"><h2>Agregar oportunidad</h2></div>
+        <form id="nform" class="nform" autocomplete="off">
+          <div class="field"><label for="nPal">Palanca</label><select id="nPal"></select></div>
+          <div class="field"><label for="nCli">Cliente</label><select id="nCli"><option>WOM</option><option>ClaroVTR</option><option>Entel</option><option>Otro</option></select></div>
+          <div class="field full"><label for="nDet">Proyecto</label><input id="nDet" required maxlength="140" placeholder="Ej: cambio de bancos de baterías en 12 sitios RM"></div>
+          <div class="field"><label for="nCon">Contacto</label><input id="nCon" maxlength="80" placeholder="Jefe de área"></div>
+          <div class="field"><label for="nMon">Monto (MM$)</label><input id="nMon" type="number" min="0" step="1" required></div>
+          <div class="field"><label for="nPro">Prob %</label><input id="nPro" type="number" min="0" max="100" step="5" value="50"></div>
+          <div class="field"><label for="nFec">Cierre est.</label><input id="nFec" type="date"></div>
+          <div class="full"><button class="btn primary" type="submit">Agregar</button> <span class="sub" id="nMsg"></span></div>
+        </form>
+      </section>
+    </div>
+  </section>
+
+  <!-- SINCRONIZACIÓN -->
+  <section role="tabpanel" id="p-sync" aria-labelledby="t-sync" hidden>
+    <section class="panel">
+      <div class="ph"><h2>Cuadre de ganado 2026</h2><p id="cuadreNote"></p></div>
+      <div class="score" id="cuadreKpi"></div>
+      <div class="tbl-wrap" style="margin-top:14px"><table class="small-tbl"><thead><tr><th>PPTO</th><th>Detalle</th><th class="r">Pipeline</th><th class="r">monday</th><th>Motivo</th></tr></thead><tbody id="cuadreRows"></tbody></table></div>
+    </section>
+    <section class="panel">
+      <div class="ph"><h2>Diferencias entre pipeline y monday</h2><p>Oportunidades 2026 de M. Vera. Corrígelas en el pipeline; monday se actualiza desde ahí.</p></div>
+      <div class="tbl-wrap"><table class="small-tbl"><thead><tr><th>PPTO</th><th>Detalle</th><th>Diferencia</th><th>Pipeline</th><th>monday</th></tr></thead><tbody id="diffRows"></tbody></table></div>
+    </section>
+  </section>
+
+  <!-- MÉTODO -->
+  <section role="tabpanel" id="p-metodo" aria-labelledby="t-metodo" hidden>
+    <div class="panel"><div class="ph"><h2>Método de cierre</h2><p>Una lección por día en la rutina. Los videos abren YouTube en otra pestaña.</p></div>
+      <p style="max-width:80ch">La secuencia es: saber cuánto te falta y a qué ritmo, calificar bien lo que tienes, cerrar con fechas acordadas con el cliente, y abrir proyectos nuevos llegando con una idea concreta a los jefes de operaciones.</p></div>
+    <div class="lessons" id="lessons"></div>
+  </section>
+
+  <footer class="foot">
+    <p><b>Fuentes:</b> hoja MASTER de "Pipeline de Ventas_INERCOP 24-26_V2- MONDAY" en Google Drive (manda sobre estado y monto) y tablero "Tracker de oportunidades" de monday (aporta probabilidad y fecha de cierre). Se leen al abrir la app, al volver a ella y cada 5 minutos; la app no escribe en ninguno de los dos. Lo que registras aquí se guarda en la hoja "Plan Cierre - Datos de la app" de tu Drive.</p>
+    <p><b>Criterios:</b> cotizaciones alternativas del mismo sitio cuentan solo por la de mayor monto. Probabilidad vacía = 50%. Fecha estimada por regla: ≥75% en dos semanas, 50% el 1 de diciembre, menos de 50% el 18 de diciembre. Negocio nuevo entra con su propia probabilidad.</p>
+  </footer>
+</div>
+
+<script>
+const SEED = {"snap": {"at": "2026-10-14", "items": [{"id": "PRO20260140", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (cubierta cinta h2,5m)", "m": "Marco Torres", "v": 18414171, "mg": 30, "p": 50}, {"id": "PRO20260141", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (cubierta malla ciclónica h2,5m)", "m": "Marco Torres", "v": 16050857, "mg": 30, "p": 50}, {"id": "PRO20260142", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (cubierta metálica h2,5m)", "m": "Marco Torres", "v": 20076286, "mg": 30, "p": 50}, {"id": "PRO20260143", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (cinta perimetral h4,8m)", "m": "Marco Torres", "v": 34434286, "mg": 30, "p": 50}, {"id": "PRO20260144", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (malla ciclónica h4,8m)", "m": "Marco Torres", "v": 32048000, "mg": 30, "p": 50}, {"id": "PRO20260145", "st": "open", "est": "PRESUPUESTO", "f": "2026-04-06", "fc": "", "c": "ClaroVTR", "d": "Cierre perimetral sitio 13_021 Cerrillos (cubierta metálica h4,8m)", "m": "Marco Torres", "v": 39820400, "mg": 30, "p": 50}, {"id": "PRO20260271", "st": "open", "est": "PRESUPUESTO", "f": "2026-07-02", "fc": "", "c": "Por confirmar", "d": "OH3051 Matanzas - construcción línea eléctrica definitiva", "m": "Vania Astroza", "v": 13648898, "mg": 30.7, "p": null}, {"id": "PRO20260285", "st": "open", "est": "PRESUPUESTO", "f": "2026-07-14", "fc": "", "c": "WOM", "d": "LIC-2080-CON03c - arriendo GG 395 sitios (sin monto)", "m": "José González", "v": 0, "mg": null, "p": null}, {"id": "PRO20260295", "st": "open", "est": "PRESUPUESTO", "f": "2026-07-28", "fc": "", "c": "ClaroVTR", "d": "Servicio peakshaving 4 sitios (Andes Bypass, Olmué, Concón, Ercilla)", "m": "Eduardo Illanes", "v": 33135230, "mg": 28, "p": 50}, {"id": "PRO20260054", "st": "open", "est": "OFERTADA", "f": "2026-02-05", "fc": "", "c": "Entel", "d": "SA396 Bollenar - instalación LMT y subestación", "m": "", "v": 25892519, "mg": 33, "p": 40}, {"id": "PRO20260212", "st": "open", "est": "OFERTADA", "f": "2026-05-06", "fc": "", "c": "WOM", "d": "RM10163 Hijuela Oriente Pelvin - búsqueda energía provisoria", "m": "WOM", "v": 200268, "mg": 40, "p": 50}, {"id": "PRO20260210", "st": "open", "est": "OFERTADA", "f": "2026-05-14", "fc": "", "c": "WOM", "d": "Factibilidad de empalme sitio MA2060", "m": "WOM", "v": 921565, "mg": 60, "p": 50}, {"id": "PRO20260215", "st": "open", "est": "OFERTADA", "f": "2026-05-19", "fc": "2026-05-15", "c": "WOM", "d": "RM10245 Mirador Lo Curro - búsqueda energía provisoria", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260216", "st": "open", "est": "OFERTADA", "f": "2026-05-19", "fc": "2026-05-15", "c": "WOM", "d": "RM1356 San Gabriel - búsqueda energía provisoria", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260217", "st": "open", "est": "OFERTADA", "f": "2026-05-19", "fc": "2026-05-15", "c": "WOM", "d": "RM10130 Cerro Colorado Quilicura - búsqueda energía provisoria", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260242", "st": "open", "est": "OFERTADA", "f": "2026-06-08", "fc": "2026-06-08", "c": "WOM", "d": "RM2251 Manuel de Salas - búsqueda energía provisoria", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260251", "st": "open", "est": "OFERTADA", "f": "2026-06-10", "fc": "2026-06-04", "c": "WOM", "d": "VA6168 Punta Llayllay - búsqueda energía provisoria", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260386", "st": "open", "est": "OFERTADA", "f": "2026-09-10", "fc": "2026-09-11", "c": "WOM", "d": "CO10264 Cochiguaz - instalación generador provisorio", "m": "WOM", "v": 8874539, "mg": 42, "p": null}, {"id": "PRO20260351", "st": "open", "est": "OFERTADA", "f": "2026-08-19", "fc": "", "c": "ClaroVTR", "d": "Nodo Fanor Velazco - reemplazo sistema de combustible", "m": "Eduardo Illanes", "v": 123377567, "mg": 25, "p": 75}, {"id": "PRO20260350", "st": "open", "est": "OFERTADA", "f": "2026-08-14", "fc": "", "c": "ClaroVTR", "d": "Nodo Caballerizas - reemplazo sistema de combustible", "m": "Eduardo Illanes", "v": 109524094, "mg": 30, "p": 75}, {"id": "PRO20260327", "st": "open", "est": "OFERTADA", "f": "2026-08-07", "fc": "", "c": "ClaroVTR", "d": "Aumento de empalme DCR Chillán", "m": "Eduardo Illanes", "v": 89972298, "mg": 25, "p": 50}, {"id": "PRO20260430", "st": "open", "est": "OFERTADA", "f": "2026-09-23", "fc": "", "c": "WOM", "d": "AY9442 El Balseo (Aysén) - línea MT 13,2 kV bifásica", "m": "Fallon Manquehue", "v": 69539666, "mg": 33, "p": 50}, {"id": "PRO20260330", "st": "open", "est": "OFERTADA", "f": "2026-08-13", "fc": "", "c": "ClaroVTR", "d": "ID 577414 Puerto Natales nodo - instalación GE 22 kVA", "m": "Sebastián Fuenzalida", "v": 43844925, "mg": 32, "p": 50}, {"id": "PRO20260162", "st": "open", "est": "OFERTADA", "f": "2026-04-16", "fc": "", "c": "ClaroVTR", "d": "Reubicación generador SW Cerrillos", "m": "Jorge Tapia", "v": 36404744, "mg": 30, "p": 50}, {"id": "PRO20260263", "st": "open", "est": "OFERTADA", "f": "2026-06-22", "fc": "", "c": "ClaroVTR", "d": "Sitio colocalizado 02_101 Calama POP", "m": "Marcos Torres", "v": 31552476, "mg": 30, "p": 50}, {"id": "PRO20260359", "st": "open", "est": "OFERTADA", "f": "2026-08-19", "fc": "", "c": "ClaroVTR", "d": "HUB Peñalolén - instalación clima Bluebox", "m": "Manuel Carvajal", "v": 33126595, "mg": 28, "p": 100}, {"id": "PRO20260421", "st": "open", "est": "OFERTADA", "f": "2026-09-21", "fc": "", "c": "ClaroVTR", "d": "ID 577842 Tresa Mall Vivo - habilitación sitios (cotización A)", "m": "Sebastián Fuenzalida", "v": 28976749, "mg": 30, "p": 50}, {"id": "PRO20260420", "st": "open", "est": "OFERTADA", "f": "2026-09-21", "fc": "", "c": "ClaroVTR", "d": "ID 577842 Tresa Mall Vivo - habilitación sitios (cotización B)", "m": "Sebastián Fuenzalida", "v": 20908916, "mg": 30, "p": 50}, {"id": "PRO20260301", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ClaroVTR", "d": "10-381 Ex Telmex - desinstalación y desarme sitio", "m": "Marcos Torres", "v": 18533333, "mg": 26, "p": 50}, {"id": "PRO20260395", "st": "open", "est": "OFERTADA", "f": "2026-09-15", "fc": "", "c": "ClaroVTR", "d": "Reemplazo BB Shoto por Deka 2000Ah", "m": "Alejandro Orellana", "v": 6298307, "mg": 30, "p": 50}, {"id": "PRO20260188", "st": "open", "est": "OFERTADA", "f": "2026-05-11", "fc": "", "c": "ClaroVTR", "d": "Desinstalación RWK sitio 08_104 Chillán Norte", "m": "Marcos Torres", "v": 5588235, "mg": 32, "p": 50}, {"id": "PRO20260253", "st": "open", "est": "OFERTADA", "f": "2026-06-11", "fc": "", "c": "ClaroVTR", "d": "Desinstalación sitio 13i_279", "m": "Adeleine Sánchez", "v": 3000000, "mg": 30, "p": 50}, {"id": "PRO20260414", "st": "open", "est": "OFERTADA", "f": "2026-09-16", "fc": "", "c": "WOM", "d": "MSO Rosas - grating en cubierta de edificio", "m": "Joaquín Caro", "v": 2165825, "mg": 28, "p": 50}, {"id": "PRO20260413", "st": "open", "est": "OFERTADA", "f": "2026-09-16", "fc": "", "c": "WOM", "d": "MSO Rosas - mejora sala de control generación", "m": "Joaquín Caro", "v": 1540000, "mg": 50, "p": 50}, {"id": "PRO20260415", "st": "open", "est": "OFERTADA", "f": "2026-09-16", "fc": "", "c": "WOM", "d": "MSO Rosas - baterías luminarias de emergencia", "m": "Joaquín Caro", "v": 1015000, "mg": 17.4, "p": 75}, {"id": "PRO20260465", "st": "open", "est": "OFERTADA", "f": "2026-10-06", "fc": "", "c": "WOM", "d": "Instalación baterías con aseguramiento sitios WOM (LPU)", "m": "José González", "v": 4000000, "mg": 30, "p": 75}, {"id": "PRO20260304", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "HUB Antofagasta exVTR - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 1278060, "mg": 40, "p": 100}, {"id": "PRO20260306", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "HUB Copiapó exVTR - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 1160176, "mg": 40, "p": 100}, {"id": "PRO20260293", "st": "open", "est": "OFERTADA", "f": "2026-07-27", "fc": "", "c": "ICETEL", "d": "SW Temuco exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 1080019, "mg": 35, "p": 100}, {"id": "PRO20260393", "st": "open", "est": "OFERTADA", "f": "2026-09-11", "fc": "", "c": "ICETEL", "d": "SW Chillán exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 990957, "mg": 40, "p": 100}, {"id": "PRO20260305", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "HUB Quillota exVTR - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 701891, "mg": 40, "p": 100}, {"id": "PRO20260308", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "HUB Los Andes exVTR - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 686176, "mg": 40, "p": 100}, {"id": "PRO20260302", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "El Salto sala sistemas exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 642748, "mg": 40, "p": 100}, {"id": "PRO20260303", "st": "open", "est": "OFERTADA", "f": "2026-07-31", "fc": "", "c": "ICETEL", "d": "SW Concert 2 exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 642748, "mg": 40, "p": 100}, {"id": "PRO20260354", "st": "open", "est": "OFERTADA", "f": "2026-08-18", "fc": "", "c": "ICETEL", "d": "Nodo Salvador Donoso exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 717528, "mg": 40, "p": 100}, {"id": "PRO20260355", "st": "open", "est": "OFERTADA", "f": "2026-08-18", "fc": "", "c": "ICETEL", "d": "SW Recreo exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 726957, "mg": 40, "p": 100}, {"id": "PRO20260356", "st": "open", "est": "OFERTADA", "f": "2026-08-18", "fc": "", "c": "ICETEL", "d": "HUB Viña del Mar exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 726957, "mg": 40, "p": 100}, {"id": "PRO20260445", "st": "open", "est": "OFERTADA", "f": "2026-10-06", "fc": "", "c": "ICETEL", "d": "HUB Viña del Mar exVTR - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 769815, "mg": 42, "p": 100}, {"id": "PRO20260446", "st": "open", "est": "OFERTADA", "f": "2026-10-06", "fc": "", "c": "ICETEL", "d": "SW Antofagasta exClaro - mtto preventivo incendio (cot. 1)", "m": "Salomón Sandoval", "v": 1308924, "mg": 40, "p": null}, {"id": "PRO20260458", "st": "open", "est": "OFERTADA", "f": "2026-10-06", "fc": "", "c": "ICETEL", "d": "SW Antofagasta exClaro - mtto preventivo incendio (cot. 2)", "m": "Salomón Sandoval", "v": 1266066, "mg": 40, "p": null}, {"id": "PRO20260460", "st": "open", "est": "OFERTADA", "f": "2026-10-07", "fc": "", "c": "ICETEL", "d": "SW Copiapó exClaro - mtto preventivo incendio", "m": "Salomón Sandoval", "v": 1205114, "mg": 40, "p": null}, {"id": "PRO20260160", "st": "won", "est": "GANADA", "f": "", "fc": "2026-04-20", "c": "Entel", "d": "", "m": "", "v": 5974360, "mg": 49, "p": 100}, {"id": "PRO20260132", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-31", "c": "Entel", "d": "", "m": "", "v": 2296911, "mg": 37.38, "p": 100}, {"id": "PRO20260119", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-30", "c": "Entel", "d": "", "m": "", "v": 47308088, "mg": 25, "p": 100}, {"id": "PRO20260105", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-22", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260104", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-22", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260103", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-22", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260102", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-22", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260100", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-24", "c": "Entel", "d": "", "m": "", "v": 1103335, "mg": 56.5, "p": 100}, {"id": "PRO20260099", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-24", "c": "Entel", "d": "", "m": "", "v": 1003189, "mg": 59.9, "p": 100}, {"id": "PRO20260098", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-24", "c": "Entel", "d": "", "m": "", "v": 869189, "mg": 59.7, "p": 100}, {"id": "PRO20260097", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-24", "c": "Entel", "d": "", "m": "", "v": 945946, "mg": 63, "p": 100}, {"id": "PRO20260096", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-17", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260095", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-17", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260094", "st": "won", "est": "GANADA", "f": "", "fc": "2026-03-17", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 48, "p": 100}, {"id": "PRO20260071", "st": "won", "est": "GANADA", "f": "", "fc": "2026-02-12", "c": "Entel", "d": "", "m": "", "v": 8652218, "mg": 43, "p": 100}, {"id": "PRO20260070", "st": "won", "est": "GANADA", "f": "", "fc": "2026-02-12", "c": "Entel", "d": "", "m": "", "v": 1507081, "mg": 50, "p": 100}, {"id": "PRO20260069", "st": "won", "est": "GANADA", "f": "", "fc": "2026-02-17", "c": "Entel", "d": "", "m": "", "v": 15364286, "mg": 44.6, "p": 100}, {"id": "PRO20260058", "st": "won", "est": "GANADA", "f": "", "fc": "2026-02-12", "c": "Entel", "d": "", "m": "", "v": 1142857, "mg": 65, "p": 100}, {"id": "PRO20260057", "st": "won", "est": "GANADA", "f": "", "fc": "2026-02-12", "c": "Entel", "d": "", "m": "", "v": 1454545, "mg": 45, "p": 100}, {"id": "PRO20260039", "st": "won", "est": "GANADA", "f": "", "fc": "2026-01-26", "c": "Entel", "d": "", "m": "", "v": 8526712, "mg": 40, "p": 100}, {"id": "PRO20260019", "st": "won", "est": "GANADA", "f": "", "fc": "2026-01-13", "c": "Entel", "d": "", "m": "", "v": 3317844, "mg": 37, "p": 100}, {"id": "PRO20260176", "st": "won", "est": "GANADA", "f": "", "fc": "2026-04-30", "c": "WOM", "d": "", "m": "", "v": 2503862, "mg": 40, "p": 100}, {"id": "PRO20260185", "st": "won", "est": "GANADA", "f": "", "fc": "2026-05-18", "c": "WOM", "d": "", "m": "", "v": 825284, "mg": 38, "p": 100}, {"id": "PRO20260194", "st": "won", "est": "GANADA", "f": "", "fc": "2026-05-05", "c": "WOM", "d": "", "m": "", "v": 200268, "mg": 35, "p": 100}, {"id": "PRO20260195", "st": "won", "est": "GANADA", "f": "", "fc": "2026-05-06", "c": "WOM", "d": "", "m": "", "v": 200268, "mg": 40, "p": 100}, {"id": "PRO20260196", "st": "won", "est": "GANADA", "f": "", "fc": "2026-05-06", "c": "WOM", "d": "", "m": "", "v": 0, "mg": null, "p": 100}, {"id": "PRO20260197", "st": "won", "est": "GANADA", "f": "", "fc": "2026-05-06", "c": "WOM", "d": "", "m": "", "v": 0, "mg": null, "p": 100}, {"id": "PRO20260237", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-01", "c": "Entel", "d": "", "m": "", "v": 19531640, "mg": null, "p": 100}, {"id": "PRO20260236", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-01", "c": "Entel", "d": "", "m": "", "v": 9703703, "mg": null, "p": 100}, {"id": "PRO20260229", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-03", "c": "WOM", "d": "", "m": "", "v": 1794184, "mg": 40, "p": 100}, {"id": "PRO20260235", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-08", "c": "WOM", "d": "", "m": "", "v": 1803165, "mg": 55, "p": 100}, {"id": "PRO20260255", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-15", "c": "WOM", "d": "", "m": "", "v": 1794184, "mg": 55, "p": 100}, {"id": "PRO20260228", "st": "won", "est": "GANADA", "f": "", "fc": "2026-06-03", "c": "WOM", "d": "", "m": "", "v": 1758646, "mg": 55, "p": 100}, {"id": "PRO20260317", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-14", "c": "WOM", "d": "", "m": "", "v": 252429259, "mg": 30, "p": 100}, {"id": "PRO20260318", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-04", "c": "WOM", "d": "", "m": "", "v": 4932720, "mg": 40, "p": 100}, {"id": "PRO20260319", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-04", "c": "WOM", "d": "", "m": "", "v": 4932720, "mg": 40, "p": 100}, {"id": "PRO20260320", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-05", "c": "WOM", "d": "", "m": "", "v": 4398509, "mg": 35, "p": 100}, {"id": "PRO20260332", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-12", "c": "WOM", "d": "", "m": "", "v": 7375238, "mg": 43, "p": 100}, {"id": "PRO20260333", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-12", "c": "WOM", "d": "", "m": "", "v": 7024036, "mg": 43, "p": 100}, {"id": "PRO20260337", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-12", "c": "WOM", "d": "", "m": "", "v": 4398509, "mg": 35, "p": 100}, {"id": "PRO20260348", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-14", "c": "WOM", "d": "", "m": "", "v": 1762898, "mg": 43, "p": 100}, {"id": "PRO20260257", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-17", "c": "WOM", "d": "", "m": "", "v": 1821557, "mg": 45, "p": 100}, {"id": "PRO20260334", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-24", "c": "WOM", "d": "", "m": "", "v": 3132250, "mg": 50, "p": 100}, {"id": "PRO20260364", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-01", "c": "WOM", "d": "", "m": "", "v": 643995, "mg": 11.5, "p": 100}, {"id": "PRO20260374", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-02", "c": "WOM", "d": "", "m": "", "v": 3692020, "mg": 50, "p": 100}, {"id": "PRO20260128", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-04", "c": "ClaroVTR", "d": "", "m": "", "v": 6309786, "mg": 30, "p": 100}, {"id": "PRO20260130", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-04", "c": "ClaroVTR", "d": "", "m": "", "v": 5951429, "mg": 30, "p": 100}, {"id": "PRO20260367", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-27", "c": "WOM", "d": "", "m": "", "v": 200268, "mg": 25, "p": 100}, {"id": "PRO20260368", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-27", "c": "WOM", "d": "", "m": "", "v": 2049609, "mg": 40, "p": 100}, {"id": "PRO20260370", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-31", "c": "WOM", "d": "", "m": "", "v": 962640, "mg": 13, "p": 100}, {"id": "PRO20260371", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-31", "c": "WOM", "d": "", "m": "", "v": 4614369, "mg": 11.5, "p": 100}, {"id": "PRO20260373", "st": "won", "est": "GANADA", "f": "", "fc": "2026-01-09", "c": "WOM", "d": "", "m": "", "v": 4452000, "mg": 13, "p": 100}, {"id": "PRO20260381", "st": "won", "est": "GANADA", "f": "", "fc": "2026-08-09", "c": "WOM", "d": "", "m": "", "v": 15507498, "mg": 45, "p": 100}, {"id": "PRO20260379", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-08", "c": "ClaroVTR", "d": "", "m": "", "v": 1274286, "mg": 30, "p": 100}, {"id": "PRO20260384", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-10", "c": "WOM", "d": "", "m": "", "v": 4669047, "mg": 55, "p": 100}, {"id": "PRO20260387", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-11", "c": "WOM", "d": "", "m": "", "v": 404762, "mg": 35, "p": 100}, {"id": "PRO20260369", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-16", "c": "WOM", "d": "", "m": "", "v": 9987766, "mg": 28, "p": 100}, {"id": "PRO20260307", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-16", "c": "ICETEL", "d": "", "m": "", "v": 7984300, "mg": 40, "p": 100}, {"id": "PRO20260192", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-28", "c": "WOM", "d": "", "m": "", "v": 17692710, "mg": 30, "p": 100}, {"id": "PRO20260431", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-25", "c": "WOM", "d": "", "m": "", "v": 1225008, "mg": 35, "p": 100}, {"id": "PRO20260435", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-29", "c": "WOM", "d": "", "m": "", "v": 2804648, "mg": 45, "p": 100}, {"id": "PRO20260426", "st": "won", "est": "GANADA", "f": "", "fc": "2026-09-23", "c": "WOM", "d": "", "m": "", "v": 5237265, "mg": 45, "p": 100}, {"id": "PRO20260441", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 2899804, "mg": 40, "p": 100}, {"id": "PRO20260382", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 5862688, "mg": 20, "p": 100}, {"id": "PRO20260412", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 4752529, "mg": 23, "p": 100}, {"id": "PRO20260423", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 1577465, "mg": 28, "p": 100}, {"id": "PRO20260436", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 3107471, "mg": 27, "p": 100}, {"id": "PRO20260424", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-05", "c": "WOM", "d": "", "m": "", "v": 466667, "mg": 25, "p": 100}, {"id": "PRO20260443", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-06", "c": "WOM", "d": "", "m": "", "v": 1285553, "mg": 50, "p": 100}, {"id": "PRO20260357", "st": "won", "est": "GANADA", "f": "", "fc": "2026-10-14", "c": "ICETEL", "d": "", "m": "", "v": 4528042, "mg": 50, "p": 100}, {"id": "L0", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 0, "mg": null, "p": 0}, {"id": "L1", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 13206990, "mg": null, "p": 0}, {"id": "L2", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 79341376, "mg": null, "p": 0}, {"id": "L3", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 10361770, "mg": null, "p": 0}, {"id": "L4", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 0, "mg": null, "p": 0}, {"id": "L5", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 100196104, "mg": null, "p": 0}, {"id": "L6", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3742568, "mg": null, "p": 0}, {"id": "L7", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3742568, "mg": null, "p": 0}, {"id": "L8", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3767516, "mg": null, "p": 0}, {"id": "L9", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3742568, "mg": null, "p": 0}, {"id": "L10", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 4010780, "mg": null, "p": 0}, {"id": "L11", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 16545961, "mg": null, "p": 0}, {"id": "L12", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 7710726, "mg": null, "p": 0}, {"id": "L13", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 6380246, "mg": null, "p": 0}, {"id": "L14", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 126210657, "mg": null, "p": 0}, {"id": "L15", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 2652691, "mg": null, "p": 0}, {"id": "L16", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 11520836, "mg": null, "p": 0}, {"id": "L17", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 39851190, "mg": null, "p": 0}, {"id": "L18", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 933333, "mg": null, "p": 0}, {"id": "L19", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1668504, "mg": null, "p": 0}, {"id": "L20", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 933333, "mg": null, "p": 0}, {"id": "L21", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 866667, "mg": null, "p": 0}, {"id": "L22", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1575253, "mg": null, "p": 0}, {"id": "L23", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 5568914, "mg": null, "p": 0}, {"id": "L24", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3790517, "mg": null, "p": 0}, {"id": "L25", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1864777, "mg": null, "p": 0}, {"id": "L26", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1857213, "mg": null, "p": 0}, {"id": "L27", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1454000, "mg": null, "p": 0}, {"id": "L28", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1498333, "mg": null, "p": 0}, {"id": "L29", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 696491, "mg": null, "p": 0}, {"id": "L30", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1515000, "mg": null, "p": 0}, {"id": "L31", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 800000, "mg": null, "p": 0}, {"id": "L32", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 88040000, "mg": null, "p": 0}, {"id": "L33", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 85697781, "mg": null, "p": 0}, {"id": "L34", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1550603, "mg": null, "p": 0}, {"id": "L35", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3787879, "mg": null, "p": 0}, {"id": "L36", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1863748, "mg": null, "p": 0}, {"id": "L37", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1518417, "mg": null, "p": 0}, {"id": "L38", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1388583, "mg": null, "p": 0}, {"id": "L39", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 5969952, "mg": null, "p": 0}, {"id": "L40", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 29344970, "mg": null, "p": 0}, {"id": "L41", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 4411765, "mg": null, "p": 0}, {"id": "L42", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 70427928, "mg": null, "p": 0}, {"id": "L43", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 6565656, "mg": null, "p": 0}, {"id": "L44", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 7119168, "mg": null, "p": 0}, {"id": "L45", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 8325833, "mg": null, "p": 0}, {"id": "L46", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 4411765, "mg": null, "p": 0}, {"id": "L47", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 394450000, "mg": null, "p": 0}, {"id": "L48", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 41468017, "mg": null, "p": 0}, {"id": "L49", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 4003888, "mg": null, "p": 0}, {"id": "L50", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3010613, "mg": null, "p": 0}, {"id": "L51", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 7368049, "mg": null, "p": 0}, {"id": "L52", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 29333333, "mg": null, "p": 0}, {"id": "L53", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 50015277, "mg": null, "p": 0}, {"id": "L54", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 11805556, "mg": null, "p": 0}, {"id": "L55", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 2997233, "mg": null, "p": 0}, {"id": "L56", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 9858520, "mg": null, "p": 0}, {"id": "L57", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 1891439, "mg": null, "p": 0}, {"id": "L58", "st": "lost", "est": "PERDIDO", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 2089333, "mg": null, "p": 0}, {"id": "D0", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 20440000, "mg": null, "p": 0}, {"id": "D1", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D2", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D3", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 40631481, "mg": null, "p": 0}, {"id": "D4", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 13451543, "mg": null, "p": 0}, {"id": "D5", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 8612116, "mg": null, "p": 0}, {"id": "D6", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 9600370, "mg": null, "p": 0}, {"id": "D7", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D8", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D9", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D10", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D11", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D12", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 200268, "mg": null, "p": 0}, {"id": "D13", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 7098592, "mg": null, "p": 0}, {"id": "D14", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 0, "mg": null, "p": 0}, {"id": "D15", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 3295775, "mg": null, "p": 0}, {"id": "D16", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 80064539, "mg": null, "p": 0}, {"id": "D17", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 5258999, "mg": null, "p": 0}, {"id": "D18", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 6722619, "mg": null, "p": 0}, {"id": "D19", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 53946921, "mg": null, "p": 0}, {"id": "D20", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 0, "mg": null, "p": 0}, {"id": "D21", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 5969612, "mg": null, "p": 0}, {"id": "D22", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 0, "mg": null, "p": 0}, {"id": "D23", "st": "desert", "est": "DESIERTA", "f": "", "fc": "", "c": "", "d": "", "m": "", "v": 8554835, "mg": null, "p": 0}]}, "pptoCli": {"PRO20260140": "ClaroVTR", "PRO20260141": "ClaroVTR", "PRO20260142": "ClaroVTR", "PRO20260143": "ClaroVTR", "PRO20260144": "ClaroVTR", "PRO20260145": "ClaroVTR", "PRO20260271": "Por confirmar", "PRO20260285": "WOM", "PRO20260295": "ClaroVTR", "PRO20260054": "Entel", "PRO20260351": "ClaroVTR", "PRO20260350": "ClaroVTR", "PRO20260327": "ClaroVTR", "PRO20260430": "WOM", "PRO20260330": "ClaroVTR", "PRO20260162": "ClaroVTR", "PRO20260263": "ClaroVTR", "PRO20260359": "ClaroVTR", "PRO20260421": "ClaroVTR", "PRO20260420": "ClaroVTR", "PRO20260301": "ClaroVTR", "PRO20260395": "ClaroVTR", "PRO20260188": "ClaroVTR", "PRO20260253": "ClaroVTR", "PRO20260414": "WOM", "PRO20260413": "WOM", "PRO20260415": "WOM", "PRO20260465": "WOM", "PRO20260304": "ICETEL", "PRO20260306": "ICETEL", "PRO20260293": "ICETEL", "PRO20260393": "ICETEL", "PRO20260305": "ICETEL", "PRO20260308": "ICETEL", "PRO20260302": "ICETEL", "PRO20260303": "ICETEL", "PRO20260354": "ICETEL", "PRO20260355": "ICETEL", "PRO20260356": "ICETEL", "PRO20260445": "ICETEL", "PRO20260446": "ICETEL", "PRO20260458": "ICETEL", "PRO20260460": "ICETEL"}, "mand": {"MARCO TORRES": "ClaroVTR", "JOSÉ GONZÁLEZ": "WOM", "EDUARDO ILLANES": "ClaroVTR", "FALLON MANQUEHUE": "WOM", "SEBASTIÁN FUENZALIDA": "ClaroVTR", "JORGE TAPIA": "ClaroVTR", "MARCOS TORRES": "ClaroVTR", "MANUEL CARVAJAL": "ClaroVTR", "ALEJANDRO ORELLANA": "ClaroVTR", "ADELEINE SÁNCHEZ": "ClaroVTR", "JOAQUÍN CARO": "WOM", "SALOMÓN SANDOVAL": "ICETEL"}, "groups": {"PRO20260140": "CERRILLOS", "PRO20260141": "CERRILLOS", "PRO20260142": "CERRILLOS", "PRO20260143": "CERRILLOS", "PRO20260144": "CERRILLOS", "PRO20260145": "CERRILLOS", "PRO20260421": "MALLVIVO", "PRO20260420": "MALLVIVO", "PRO20260446": "ANTOFA", "PRO20260458": "ANTOFA"}};
+const LESSONS = [
+{"k":"math","t":"La matemática de tu meta","short":"Trabaja hacia atrás desde la meta: cuánto falta, a qué tasa cierras y cuánto tienes que cotizar cada semana.","pts":["Brecha que el pipeline no cubre hoy: {GAP}. Esa cifra no se cierra empujando más fuerte lo mismo: se cierra cotizando más.","Si cierras 1 de cada 2 cotizaciones nuevas, necesitas cotizar el doble de la brecha. El tablero lo traduce a ritmo semanal: {WQ}.","Mide actividad, no solo resultado: conversaciones, cotizaciones enviadas y monto cotizado por semana. Si la actividad está bien y el resultado no, el problema es la tasa de cierre o el tamaño del ticket."],"apply":"Anota cuánto vas a cotizar esta semana y en qué cliente. Si no llegas al ritmo, el paso 4 de la rutina es donde lo recuperas.","v":[{"t":"Cómo establecer metas de ventas en una empresa","u":"https://www.youtube.com/watch?v=Va9OBVQGKaw"}]},
+{"k":"meddic","t":"Califica antes de empujar: MEDDIC","short":"Seis preguntas para saber si una oferta de verdad se va a cerrar este año o solo ocupa espacio en el pipeline.","pts":["Métricas: qué gana el cliente en números (horas de caída evitadas, multas por SLA, consumo de combustible).","Decisor económico: quién firma el CAPEX. Si no lo conoces, la probabilidad real es baja aunque el pipeline diga 75%.","Criterios de decisión: precio, plazo, experiencia, garantía. Pregúntalos en vez de suponerlos.","Proceso de decisión: quién revisa, quién aprueba, cuándo se emite la OC y qué documentos piden.","Dolor identificado: el problema operativo concreto que hace urgente la compra.","Campeón: el jefe de operaciones que quiere que ganes y te avisa lo que pasa adentro."],"apply":"Toma tu oferta más grande abierta y responde las seis letras. Las que no sepas son tus preguntas de la próxima llamada.","v":[{"t":"Cómo cerrar ventas B2B grandes con el método MEDDIC","u":"https://www.youtube.com/watch?v=jcJrZg5mbFE"},{"t":"MEDDIC / MEDDPICC explicado en 10 minutos (inglés)","u":"https://www.youtube.com/watch?v=l4yTE-5R5Zo"},{"t":"Cómo calificar oportunidades de negocio","u":"https://www.youtube.com/watch?v=rJ0wdrvK_lk"}]},
+{"k":"map","t":"Plan de cierre acordado con el cliente","short":"Una oferta sin fechas acordadas con el cliente se cierra cuando el cliente quiera. Con un plan de cierre, se cierra cuando ambos se comprometieron.","pts":["Parte desde la fecha que importa (OC antes del 20 de diciembre) y anota hacia atrás cada hito: validación técnica, visita, aprobación de presupuesto, emisión de OC.","Cada hito tiene un responsable del lado del cliente y otro del lado de INERCOP.","Envía el plan por correo después de la llamada y pide que lo confirme. Si no lo confirma, la fecha de cierre no es real.","Revisa el plan en cada contacto: lo que se atrasa te dice dónde está el riesgo."],"apply":"Elige una oferta madura de hoy y propón al mandante un plan de 4 hitos con fechas hasta la OC.","v":[{"t":"Close Faster: The Mutual Action Plan Strategy (inglés)","u":"https://www.youtube.com/watch?v=MM7K1ILCN6c"},{"t":"B2B Sales: Mutual Action Plans and Decision Making Process (inglés)","u":"https://www.youtube.com/watch?v=KeVZrPSEFsw"}]},
+{"k":"spin","t":"Preguntas que abren proyectos: SPIN","short":"Para encontrar negocio nuevo con los jefes de operaciones, pregunta en este orden: situación, problema, implicancia y necesidad.","pts":["Situación: ¿cuántos sitios tienen respaldo con grupo generador o baterías con más de 5 años?","Problema: ¿cuántas caídas por energía tuvieron este año? ¿Dónde se repiten?","Implicancia: ¿qué les cuesta cada caída en SLA, multas o visitas de emergencia? ¿Qué pasa si llega una ola de calor en enero?","Necesidad-beneficio: ¿qué valor tendría resolverlo en los 10 sitios críticos antes del verano?","Deja que el cliente diga el problema con sus palabras; esa frase es la que va en tu propuesta."],"apply":"En la conversación del paso 4, haz al menos una pregunta de implicancia y anota la respuesta.","v":[{"t":"SPIN Selling: ¿qué preguntas destapan el problema?","u":"https://www.youtube.com/watch?v=iVTCIMhFz5c"},{"t":"Método SPIN Selling, ejemplo práctico","u":"https://www.youtube.com/watch?v=Q3hk4xemiAk"}]},
+{"k":"challenger","t":"Llega con una idea, no con una pregunta","short":"Los clientes valoran al proveedor que les enseña algo de su propia operación. Llega con un dato y una propuesta concreta.","pts":["Usa lo que ves en terreno: qué sitios fallan, qué equipos están al final de su vida útil, qué pasa con el combustible.","Formula la idea así: 'En los sitios X vemos este patrón; si no se atiende antes de diciembre, el riesgo es Y; proponemos Z'.","Adapta el mensaje a quien escucha: al jefe de operaciones le importa la disponibilidad, a finanzas el costo evitado.","No temas desafiar el plan del cliente si tienes datos; hazlo con respeto y con números."],"apply":"Prepara una idea de una frase para el cliente del día (WOM o Claro) basada en algo que viste en terreno.","v":[{"t":"El vendedor desafiante","u":"https://www.youtube.com/watch?v=A8nlfmgxn9k"},{"t":"The Challenger Sales Model en 4 minutos (inglés)","u":"https://www.youtube.com/watch?v=WXlhmDoMXqI"}]},
+{"k":"follow","t":"Seguimiento con propósito","short":"Cada contacto debe aportar algo y terminar con un próximo paso con fecha. 'Solo quería saber cómo va' no mueve una oferta.","pts":["Antes de llamar, define qué necesitas que pase: una fecha, un nombre, un documento.","Aporta algo en cada contacto: una foto del sitio, un plazo de entrega, una alternativa técnica.","Nunca cuelgues sin próximo paso con fecha. En la rutina, el tablero no te deja cerrar una tarea sin eso.","Cadencia razonable: 2, 3 y 5 días hábiles. Si no responde tras tres intentos, cambia de interlocutor o de canal."],"apply":"Revisa tus tareas con fecha: cada una debe tener un qué y un con quién concretos.","v":[{"t":"Cómo hacer follow-ups efectivos en ventas B2B","u":"https://www.youtube.com/watch?v=AuAxlN3A52s"},{"t":"Cómo hacer seguimiento a un cliente B2B: 3 tips","u":"https://www.youtube.com/watch?v=raou6P6pCYQ"}]},
+{"k":"price","t":"Defender el margen","short":"Bajar el precio sin cambiar el alcance enseña al cliente a pedir descuento. Negocia alcance, plazo o forma de pago.","pts":["Pregunta contra qué está comparando antes de responder: otro proveedor, su presupuesto o un precio histórico.","Ofrece opciones en vez de descuentos: alcance completo, alcance base y alcance mínimo, como hiciste en Cerrillos.","Si cedes algo, pide algo a cambio: adjudicación antes de una fecha, anticipo o más sitios.","Muestra el costo de no hacerlo: una caída de sitio cuesta más que la diferencia de precio."],"apply":"Para la oferta con margen más bajo de tu lista, prepara una opción de alcance reducido en vez de un descuento.","v":[{"t":"3 respuestas cuando un cliente dice que eres muy caro","u":"https://www.youtube.com/watch?v=Eu5kHylYo94"}]},
+{"k":"capex","t":"Cierre de año y CAPEX","short":"En octubre y noviembre los clientes deciden qué hacer con el presupuesto que no ejecutaron. Esa es tu ventana.","pts":["Pregunta directamente: ¿qué presupuesto 2026 tienen sin adjudicar y qué pasa con él el 31 de diciembre?","Ofrece lo que reduce su riesgo de no ejecutar: plazos cortos, equipos en stock, facturación por hitos.","Prioriza trabajos que se puedan adjudicar y facturar antes de fin de año: reemplazos, suministros, obras acotadas.","Deja propuestas listas para enero con los proyectos que no alcancen: es el primer pipeline de 2027."],"apply":"Pregunta hoy a un jefe de operaciones por su saldo de CAPEX 2026 y regístralo en el paso 4.","v":[]},
+{"k":"review","t":"Revisión semanal del pipeline","short":"Treinta minutos cada viernes para que el pipeline diga la verdad. Un pipeline inflado te hace creer que vas bien.","pts":["Cierra lo que está muerto: ofertas sin respuesta hace más de 60 días o que el cliente descartó.","Ajusta probabilidades con evidencia: si no tienes OC ni fecha de decisión, no es 75%.","Pon fechas de cierre reales en cada oferta abierta: el pronóstico semanal depende de eso.","Mira la cobertura: el pipeline abierto debería ser 2 a 3 veces lo que te falta. Si no, la semana siguiente es de prospección."],"apply":"Hoy es viernes: en Oportunidades, filtra 'Solo frías' y decide una por una si sigue o se cierra.","v":[{"t":"How to run pipeline reviews effectively (inglés)","u":"https://www.youtube.com/watch?v=30Z2OhP0d50"},{"t":"Improve Sales Forecast Accuracy (inglés)","u":"https://www.youtube.com/watch?v=b4enq88X9pQ"}]}
+]
+;
+const CFG_KEY="plan-cierre-cfg", CACHE_KEY="plan-cierre-cache", QUEUE_KEY="plan-cierre-cola";
+let CFG=null; try{CFG=JSON.parse(localStorage.getItem(CFG_KEY)||"null")}catch(e){}
+const DEADLINE=new Date(2026,11,20,23,59);
+const LEVERS=[
+  {k:"capex",t:"CAPEX ya presupuestado",d:"Pregunta a los jefes de operaciones de WOM y Claro qué presupuesto 2026 queda sin adjudicar y ofrece ejecución inmediata."},
+  {k:"det",t:"Proyectos detenidos",d:"Retoma trabajos en pausa (stand by, desiertas, sin respuesta) con un alcance que se pueda cerrar en diciembre."},
+  {k:"core",t:"Dolores del core",d:"Fallas de grupos generadores y bancos de baterías al final de su vida útil: levantamiento y paquete de reemplazo en sitios críticos."}
+];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const mm=v=>(v/1e6).toLocaleString('es-CL',{maximumFractionDigits:Math.abs(v)>=1e8?0:1});
+const today=()=>{const d=new Date();d.setHours(12,0,0,0);return d};
+const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const TODAY=()=>iso(today());
+const parseD=s=>{if(!s)return null;const [y,m,d]=s.split('-').map(Number);if(!y)return null;return new Date(y,(m||1)-1,d||1,12)};
+const fmtD=s=>{const d=parseD(s);return d?d.toLocaleDateString('es-CL',{day:'2-digit',month:'short'}):'—'};
+const days=(a,b)=>Math.round((b-a)/864e5);
+const isWeekday=d=>d.getDay()>0&&d.getDay()<6;
+
+// ---------- state ----------
+let MONITEMS=null, DRIVEROWS=null;
+let ITEMS=SEED.snap.items;
+const SRC={mon:{st:"wait",msg:"conectando…"},drv:{st:"wait",msg:"conectando…"}};
+let PLAN={meta:900,mode:"new",base:"pipeline"};
+let OV={}, NEW={}, CONT={}, DIAS={};
+let ME=null, CANWRITE=true, OWNER=true, STORE="local", DB=null;
+let sortKey="ev", TAB="hoy", DIFFS=[], CUADRE=null;
+
+// ---------- parsing ----------
+function cv(cols,id){const c=cols.find(x=>x.id===id);if(!c)return "";return (c.display_value!=null&&c.display_value!=="")?c.display_value:(c.text||"")}
+const RATE={CLP:1,USD:865,EUR:1020,UF:39690};
+function cliNorm(e){const u=(e||"").toUpperCase().trim(); if(!u)return ""; if(u.includes("CLARO")||u.includes("VTR"))return "ClaroVTR"; if(u.includes("ENTEL"))return "Entel"; if(u.startsWith("WOM"))return "WOM"; if(u.includes("ICETEL"))return "ICETEL"; return e.trim()}
+function inferCli(id,emp,mand,det){
+  const e=cliNorm(emp); if(e)return [e,0];
+  if(SEED.pptoCli[id])return [SEED.pptoCli[id],1];
+  const m=(mand||"").trim().toUpperCase();
+  if(m&&SEED.mand[m])return [SEED.mand[m],1];
+  const mc=cliNorm(m); if(mc==="WOM"||mc==="Entel"||mc==="ClaroVTR")return [mc,0];
+  const t=(det||"").toUpperCase();
+  if(/EX ?CLARO|EXVTR|CLARO/.test(t))return ["ClaroVTR",1];
+  if(/MSO|RSO|WOM/.test(t))return ["WOM",1];
+  return ["Sin cliente",1];
+}
+function normMonday(payload){
+  let p=payload; if(typeof p==="string"){try{p=JSON.parse(p)}catch(e){throw new Error("formato")}}
+  if(p&&p.data&&p.data.boards)p=p.data;
+  const raw=p&&p.boards&&p.boards[0]&&p.boards[0].items_page&&p.boards[0].items_page.items;
+  if(!Array.isArray(raw))throw new Error("formato");
+  const by={};
+  raw.forEach(it=>{
+    const cols=it.column_values||[], s=cv(cols,"status");
+    let st="open",est="OFERTADA";
+    if(s==="Cerrado Ganado"){st="won";est="GANADA"} else if(s==="Cerrado Perdido"){st="lost";est="PERDIDO"} else if(s==="Cerrado Desierto"){st="desert";est="DESIERTA"}
+    else if(/PRESUPUESTO/i.test(s))est="PRESUPUESTO"; else if(/STAND BY/i.test(s))est="STAND BY"; else if(/Negociaci/i.test(s))est="NEGOCIACIÓN"; else if(/PROSPECT|Calific/i.test(s))est="PROSPECTO";
+    const cur=(cv(cols,"moneda_mkmtp6yh")||"CLP").trim();
+    const v=(parseFloat(cv(cols,"numbers"))||0)*(RATE[cur]||1);
+    const mgT=cv(cols,"_margen_esperado_mkmqb10q"), prT=parseFloat(cv(cols,"probabilidad_cercana_mkmpb20c"));
+    const det=cv(cols,"estado_mkmqxqnc"), mand=cv(cols,"texto_mkmq2fwk");
+    const id=it.name.trim().toUpperCase();
+    const [c,ci]=inferCli(id,cv(cols,"reflejo_mkmp4yyk"),mand,det);
+    const o={id,st,est,f:cv(cols,"fecha_mkmq64sg"),fc:cv(cols,"date9"),c,ci,d:det,m:mand,v,mg:mgT===""?null:parseFloat(mgT),p:isNaN(prT)?(st==="won"?100:null):prT,src:"mon"};
+    const prev=by[id]; if(!prev||(o.st==="won"&&prev.st!=="won"))by[id]=o;
+  });
+  return by;
+}
+function b64ToText(b64){const bin=atob(b64.replace(/\s/g,""));const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);return new TextDecoder("utf-8").decode(u)}
+function parseCSV(t){const rows=[];let row=[],f="",q=false;for(let i=0;i<t.length;i++){const ch=t[i];
+  if(q){if(ch==='"'){if(t[i+1]==='"'){f+='"';i++}else q=false}else f+=ch}
+  else if(ch==='"')q=true; else if(ch===','){row.push(f);f=""} else if(ch==='\n'){row.push(f);rows.push(row);row=[];f=""} else if(ch!=='\r')f+=ch}
+  if(f||row.length){row.push(f);rows.push(row)} return rows}
+const money=s=>{const t=String(s||"").replace(/[^\d-]/g,"");return t&&t!=="-"?parseFloat(t):0};
+const pct=s=>{const t=String(s||"").replace("%","").replace(/\./g,"").replace(",",".").trim();const n=parseFloat(t);return isNaN(n)?null:n};
+function dmy(s){const m=String(s||"").trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);return m?`${m[3]}-${m[2].padStart(2,"0")}-${m[1].padStart(2,"0")}`:""}
+function normPipeline(rows){
+  if(!Array.isArray(rows))throw new Error((rows&&rows.error)||"formato");
+  const out=[];
+  rows.forEach(r=>{
+    const id=String(r.id||"").trim().toUpperCase(); if(!id||id==="NA")return;
+    const e=String(r.est||"").trim().toUpperCase();
+    const st=e==="GANADA"?"won":e==="PERDIDO"?"lost":e==="DESIERTA"?"desert":"open";
+    const ag=parseInt(r.ag),mg_=parseInt(r.mgan),pr=parseFloat(r.pr);
+    out.push({id,row:r.row,st,est:e||"OFERTADA",f:dmy(r.fe),ae:parseInt(r.ae)||null,ag:isNaN(ag)?null:ag,mgan:isNaN(mg_)?null:mg_,c:cliNorm(r.cli)||"Sin cliente",d:String(r.det||"").trim(),m:String(r.man||"").trim(),v:money(r.v),mg:pct(r.mg),p10:isNaN(pr)?null:pr,src:"drv"});
+  });
+  return out;
+}
+// ---------- merge ----------
+function rebuild(){
+  if(!MONITEMS&&!DRIVEROWS){ITEMS=SEED.snap.items;DIFFS=[];CUADRE=null;return}
+  const mon=MONITEMS||{}; const items=[]; const seen=new Set(); DIFFS=[];
+  if(DRIVEROWS){
+    const dup={};
+    DRIVEROWS.forEach(r=>{
+      const in26=r.id.startsWith("PRO2026")||r.ag===2026; if(!in26)return;
+      let key=r.id; dup[key]=(dup[key]||0)+1; if(dup[key]>1)key=key+"#"+dup[key];
+      const m=mon[r.id];
+      const o={id:key,st:r.st,est:r.est==="GANADA"?"GANADA":r.est,f:r.f||(m&&m.f)||"",fc:(m&&m.fc)||(r.st==="won"&&r.ag&&r.mgan?`${r.ag}-${String(r.mgan).padStart(2,"0")}-15`:""),
+        c:r.c!=="Sin cliente"?r.c:(m?m.c:"Sin cliente"),ci:0,d:r.d||(m&&m.d)||"",m:r.m||(m&&m.m)||"",v:r.v,mg:r.mg!=null?r.mg:(m?m.mg:null),
+        p:m&&m.p!=null?m.p:(r.p10!=null?r.p10*10:null),ag:r.ag,src:m?"both":"drv"};
+      if(o.st==="won"&&r.ag!==2026)return; // ganada en otro año
+      items.push(o); seen.add(r.id);
+      if(!m){ if(r.id.startsWith("PRO2026"))DIFFS.push({id:r.id,d:o.d,k:"Solo en pipeline",a:`${r.est} · $${mm(r.v)}`,b:"—"}); }
+      else{
+        if(m.st!==r.st)DIFFS.push({id:r.id,d:o.d,k:"Estado distinto",a:r.est,b:m.est});
+        if(Math.abs(m.v-r.v)>Math.max(1000,0.01*r.v))DIFFS.push({id:r.id,d:o.d,k:"Monto distinto",a:"$"+mm(r.v),b:"$"+mm(m.v)});
+      }
+    });
+    Object.values(mon).forEach(m=>{ if(seen.has(m.id))return; items.push({...m,src:"mon"}); DIFFS.push({id:m.id,d:m.d,k:"Solo en monday",a:"—",b:`${m.est} · $${mm(m.v)}`}); });
+  } else Object.values(mon).forEach(m=>items.push(m));
+  ITEMS=items;
+  // cuadre
+  if(DRIVEROWS&&MONITEMS){
+    const dW=DRIVEROWS.filter(r=>r.st==="won"&&r.ag===2026), mW=Object.values(MONITEMS).filter(m=>m.st==="won");
+    const dMap={}; dW.forEach(r=>{dMap[r.id]=(dMap[r.id]||0)+r.v});
+    const mMap={}; mW.forEach(m=>mMap[m.id]=m);
+    const rows=[];
+    Object.keys(dMap).forEach(id=>{const m=MONITEMS[id], vd=dMap[id]; if(!vd&&!(m&&m.v))return;
+      if(!m)rows.push({id,d:(dW.find(r=>r.id===id)||{}).d,vd,vm:0,mot:"Ganada en pipeline, no existe en monday con vendedor M. Vera"});
+      else if(m.st!=="won")rows.push({id,d:m.d,vd,vm:0,mot:`Ganada en pipeline, en monday figura ${m.est.toLowerCase()}`});
+      else if(Math.abs(m.v-vd)>1000)rows.push({id,d:m.d,vd,vm:m.v,mot:"Monto distinto"});});
+    mW.forEach(m=>{if(!(m.id in dMap)&&m.v>0){const r=DRIVEROWS.find(x=>x.id===m.id);
+      rows.push({id:m.id,d:m.d,vd:0,vm:m.v,mot:r?(r.st==="won"?`Pipeline la registra ganada en ${r.ag||"año sin dato"}`:`En pipeline figura ${r.est.toLowerCase()}`):"Ganada en monday, no está en el pipeline con KAM MVera"})}});
+    rows.sort((a,b)=>Math.abs(b.vd-b.vm)-Math.abs(a.vd-a.vm));
+    CUADRE={dW:dW.reduce((a,r)=>a+r.v,0),nd:dW.length,mW:mW.reduce((a,m)=>a+m.v,0),nm:mW.length,rows};
+  } else CUADRE=null;
+}
+
+// ---------- derived ----------
+const groupOf=o=>SEED.groups[o.id]||"";
+function stOf(o){return (OV[o.id]&&OV[o.id].st)||o.st}
+function prOf(o){const x=OV[o.id]&&OV[o.id].p;return (x!=null&&x!=="")?+x:(o.p==null?50:o.p)}
+function isCounted(o,opens){const g=groupOf(o);if(!g)return true;const sib=opens.filter(x=>groupOf(x)===g&&stOf(x)==="open");if(!sib.length)return true;return sib.reduce((a,b)=>b.v>a.v?b:a)===o}
+function fcOf(o){const x=OV[o.id]&&OV[o.id].fc; if(x)return {d:x,est:false}; const t=today();
+  if(o.fc&&o.st==="open"){const d=parseD(o.fc); if(d&&d>=t)return {d:o.fc,est:false}}
+  const p=prOf(o); let d; if(p>=75){d=new Date(t);d.setDate(d.getDate()+14)} else if(p>=50)d=new Date(2026,11,1,12); else d=new Date(2026,11,18,12);
+  if(d>DEADLINE)d=new Date(DEADLINE); if(d<t)d=new Date(t); return {d:iso(d),est:true}}
+function calc(){
+  const t=today(), opens=ITEMS.filter(o=>o.st==="open");
+  const won=ITEMS.filter(o=>o.st==="won"), wonSum=won.reduce((a,o)=>a+o.v,0);
+  let marked=0,wt=0,nom=0,eu=0,euN=0;
+  opens.forEach(o=>{const st=stOf(o); if(!isCounted(o,opens))return;
+    if(st==="won")marked+=o.v; else if(st==="open"){const p=prOf(o)/100;wt+=o.v*p;nom+=o.v;if(o.mg!=null&&o.mg<100){eu+=o.v*o.mg/100*p;euN+=o.v*p}}});
+  const news=Object.values(NEW);
+  const newIdent=news.reduce((a,n)=>a+(+n.monto||0)*1e6,0), newWt=news.reduce((a,n)=>a+(+n.monto||0)*1e6*((n.p==null?50:+n.p)/100),0);
+  const meta=PLAN.meta*1e6, base=PLAN.mode==="acc"?wonSum:0;
+  const remaining=Math.max(0,meta-base-marked), gapAfterPipe=Math.max(0,remaining-wt), gapFinal=Math.max(0,gapAfterPipe-newWt);
+  const weeks=Math.max(0.5,(DEADLINE-t)/(7*864e5));
+  return {opens,won,wonSum,marked,wt,nom,eu,mgW:euN?eu/euN*100:0,newIdent,newWt,meta,base,remaining,gapAfterPipe,gapFinal,weeks,weeklyQuote:gapAfterPipe/weeks/0.5};
+}
+
+// ---------- status & strip ----------
+function renderStatus(){
+  const s=(k,label)=>{const x=SRC[k];const cls=x.st==="ok"?"ok":x.st==="err"?"err":"wait";
+    const at=x.at?" · "+new Date(x.at).toLocaleTimeString('es-CL',{hour:'2-digit',minute:'2-digit'}):"";return `<span><span class="dot ${cls}"></span>${label}: ${esc(x.st==="ok"?"sincronizado"+at:x.st==="cache"?"último dato guardado"+at:x.msg)}</span>`};
+  $("srcStatus").innerHTML=s("drv","Pipeline")+s("mon","monday")+(QUEUE.length?`<span><span class="dot wait"></span>${QUEUE.length} cambio(s) por enviar</span>`:"")+(!MONITEMS&&!DRIVEROWS?`<span>mostrando la foto del ${fmtD(SEED.snap.at)}</span>`:"");
+}
+function renderStrip(c){
+  const done=dayProgress().pct;
+  $("strip").innerHTML=[
+    ["Ganado 2026",`$${mm(c.wonSum)}<small> MM</small>`,""],
+    ["Esperado del pipeline",`$${mm(c.wt)}<small> MM</small>`,""],
+    ["Falta para la meta",`$${mm(c.remaining)}<small> MM</small>`,c.remaining>0?"":"ok"],
+    ["Brecha tras negocio nuevo",`$${mm(c.gapFinal)}<small> MM</small>`,c.gapFinal>0?"hot":"ok"],
+    ["Cotizar nuevo por semana",`$${mm(c.weeklyQuote)}<small> MM</small>`,""],
+    ["Rutina de hoy",`${done}<small>%</small>`,done===100?"ok":"hot"],
+  ].map(x=>`<div class="st ${x[2]}"><span class="eyebrow">${x[0]}</span><span class="v num">${x[1]}</span></div>`).join("")+
+  `<div class="st"><span class="eyebrow">Días al 20-dic</span><span class="v num">${Math.max(0,days(today(),DEADLINE))}</span></div>`;
+}
+
+// ---------- HOY: rutina ----------
+function dayDoc(){return DIAS[TODAY()]||{}}
+function lessonFor(d){ if(d.getDay()===5){const w=LESSONS.find(l=>l.k==="review");if(w)return w}
+  let n=0; for(let x=new Date(2026,9,15,12);x<d;x.setDate(x.getDate()+1))if(isWeekday(x))n++;
+  const pool=LESSONS.filter(l=>l.k!=="review"); return pool[((n%pool.length)+pool.length)%pool.length]}
+function ensurePlan(c){
+  const dd=dayDoc(); if(dd.plan||!OWNER||!CANWRITE)return dd.plan||autoPlan(c);
+  const plan=autoPlan(c); saveDay({plan}); return plan;
+}
+function autoPlan(c){
+  const t=today(), opens=c.opens.filter(o=>stOf(o)==="open"&&isCounted(o,c.opens)&&o.v>0);
+  const ev=o=>o.v*prOf(o)/100;
+  const ripe=opens.filter(o=>prOf(o)>=75||days(t,parseD(fcOf(o).d))<=14).sort((a,b)=>ev(b)-ev(a)).slice(0,3).map(o=>o.id);
+  const cold=opens.filter(o=>!ripe.includes(o.id)&&o.f&&days(parseD(o.f),t)>45&&!(OV[o.id]&&OV[o.id].accionAt&&days(new Date(OV[o.id].accionAt),t)<14)).sort((a,b)=>b.v-a.v).slice(0,2).map(o=>o.id);
+  const dow=t.getDay(); const cli=[1,3,5].includes(dow)?"WOM":"ClaroVTR";
+  return {s2:ripe,s3:cold,cli,lesson:lessonFor(t).k};
+}
+function itemDone(id){const r=(dayDoc().res||{})[id]; if(!r)return false; if(r.r==="cae")return true; const ov=OV[id]||{}; return !!(ov.accion&&ov.para)}
+function todaysChanges(){const d=TODAY();return Object.entries(OV).filter(([id,o])=>o.at&&o.at.slice(0,10)===d&&(o.st||o.p!=null||o.fc)).map(([id])=>id)}
+function contactsToday(){const d=TODAY();return Object.values(CONT).filter(x=>x.fecha===d).length+Object.values(NEW).filter(n=>n.at&&n.at.slice(0,10)===d).length}
+function stepState(plan){
+  const dd=dayDoc(), chk=dd.chk||{};
+  const s=[];
+  s[1]=!!(chk.brecha&&chk.leccion);
+  s[2]=plan.s2.length===0||plan.s2.every(itemDone);
+  s[3]=plan.s3.length===0||plan.s3.every(itemDone);
+  s[4]=contactsToday()>=1;
+  s[5]=todaysChanges().length===0?(s[1]&&s[2]&&s[3]&&s[4]):!!chk.pipeline;
+  s[6]=!!(dd.cierre&&dd.cierre.txt&&dd.cierre.comp);
+  return s;
+}
+function dayProgress(){
+  const c=calc(); const plan=dayDoc().plan||autoPlan(c); const s=stepState(plan);
+  const n=[1,2,3,4,5,6].filter(i=>s[i]).length; return {s,plan,pct:Math.round(n/6*100),n};
+}
+function oppById(id){return ITEMS.find(o=>o.id===id)}
+const RES=[["avanza","Avanza, próximo paso agendado"],["oc","Pide OC / en adjudicación"],["sinresp","Sin respuesta, reintentar"],["cae","Se cae"]];
+function taskCard(id,ro){
+  const o=oppById(id); if(!o)return `<div class="task"><span class="sub">${esc(id)} ya no está abierta en el pipeline.</span></div>`;
+  const r=(dayDoc().res||{})[id]||{}, ov=OV[id]||{}, done=itemDone(id);
+  const dis=ro?" disabled":"";
+  const age=o.f?days(parseD(o.f),today()):null;
+  return `<div class="task${done?" ok":""}" data-task="${esc(id)}">
+    <div class="tt"><span class="t">${esc(o.d||id)}</span><span class="num">$${mm(o.v)} · ${prOf(o)}%</span></div>
+    <div class="sub">${esc(id)} · ${esc(o.c)} · ${esc(o.m||"sin mandante")}${age!=null?` · ${age} días desde el envío`:""}${ov.accion?` · última acción: ${esc(ov.accion)}`:""}</div>
+    <div class="res" role="group" aria-label="Resultado">${RES.map(([k,l])=>`<button type="button" data-res="${k}" data-id="${esc(id)}" aria-pressed="${r.r===k}"${dis}>${l}</button>`).join("")}</div>
+    ${r.r&&r.r!=="cae"?`<div class="row2"><input id="na-${esc(id)}" data-id="${esc(id)}" data-f="accion" value="${esc(ov.accion||"")}" placeholder="Próximo paso y con quién" maxlength="160" aria-label="Próximo paso"${dis}><input type="date" id="np-${esc(id)}" data-id="${esc(id)}" data-f="para" value="${esc(ov.para||"")}" min="${TODAY()}" aria-label="Para cuándo"${dis}></div>${!done?'<span class="sub">Falta el próximo paso con fecha.</span>':""}`:""}
+  </div>`;
+}
+function renderHoy(){
+  const c=calc(), plan=ensurePlan(c), dd=dayDoc(), chk=dd.chk||{}, s=stepState(plan);
+  const t=today(); const ro=!OWNER||!CANWRITE;
+  $("dayLabel").textContent=t.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long'});
+  const n=[1,2,3,4,5,6].filter(i=>s[i]).length; $("dayBar").style.width=(n/6*100)+"%"; $("dayPct").textContent=`${n} de 6 pasos`;
+  const L=LESSONS.find(l=>l.k===plan.lesson)||lessonFor(t);
+  const changes=todaysChanges();
+  const steps=[
+    {t:"Arranque: tu número y la lección del día",why:"Cinco minutos para saber cuánto falta y aprender una herramienta que usarás hoy.",
+     body:`<p>Faltan <b class="num">$${mm(c.remaining)} MM</b> en ${Math.max(0,days(t,DEADLINE))} días. Con lo esperado del pipeline, la brecha es <b class="num">$${mm(c.gapAfterPipe)} MM</b>: necesitas cotizar negocio nuevo por <b class="num">$${mm(c.weeklyQuote)} MM</b> esta semana.</p>
+       <div class="lesson-card"><span class="eyebrow">Lección del día</span><h3>${esc(L.t)}</h3><p class="sub">${esc(L.short)}</p><div class="apply"><b>Aplícalo hoy:</b> ${esc(L.apply)}</div><div class="vids">${L.v.map(v=>`<a class="vid" href="${esc(v.u)}" target="_blank" rel="noopener"><span class="play"></span>${esc(v.t)}</a>`).join("")}</div><button class="btn" type="button" data-goto="metodo">Ver la lección completa</button></div>
+       <label class="chk"><input type="checkbox" id="c-brecha" data-chk="brecha"${chk.brecha?" checked":""}${ro?" disabled":""}> <span>Revisé la brecha y el ritmo de hoy.</span></label>
+       <label class="chk"><input type="checkbox" id="c-leccion" data-chk="leccion"${chk.leccion?" checked":""}${ro?" disabled":""}> <span>Leí la lección y sé dónde aplicarla hoy.</span></label>`},
+    {t:"Empujar lo que está maduro",why:"Ofertas con probabilidad alta o con cierre en las próximas dos semanas. Llama hoy, registra el resultado y agenda el siguiente paso.",
+     body:plan.s2.length?plan.s2.map(id=>taskCard(id,ro)).join(""):'<p class="sub">No hay ofertas maduras hoy. Pasa al siguiente paso.</p>'},
+    {t:"Rescatar ofertas frías",why:"Ofertas con más de 45 días sin movimiento. Una llamada las revive o las saca del pipeline; las dos cosas sirven.",
+     body:plan.s3.length?plan.s3.map(id=>taskCard(id,ro)).join(""):'<p class="sub">No hay ofertas frías pendientes.</p>'},
+    {t:`Abrir negocio nuevo con ${plan.cli==="WOM"?"WOM":"Claro"}`,why:"Una conversación por día con un jefe de operaciones. Usa las preguntas SPIN de la lección para encontrar CAPEX, proyectos detenidos o dolores del core.",
+     body:`<form class="nform" id="cform" autocomplete="off">
+       <div class="field"><label for="cCli">Cliente</label><select id="cCli"${ro?" disabled":""}><option${plan.cli==="WOM"?" selected":""}>WOM</option><option${plan.cli==="ClaroVTR"?" selected":""}>ClaroVTR</option><option>Entel</option><option>Otro</option></select></div>
+       <div class="field"><label for="cPer">Con quién</label><input id="cPer" maxlength="80" placeholder="Nombre y cargo" required${ro?" disabled":""}></div>
+       <div class="field full"><label for="cRes">Qué salió de la conversación</label><input id="cRes" maxlength="200" placeholder="Ej: tiene saldo CAPEX para baterías en 8 sitios, pide propuesta" required${ro?" disabled":""}></div>
+       <div class="field"><label for="cPal">Palanca</label><select id="cPal"${ro?" disabled":""}>${LEVERS.map(l=>`<option value="${l.k}">${l.t}</option>`).join("")}</select></div>
+       <div class="field"><label for="cMon">Monto potencial (MM$, opcional)</label><input id="cMon" type="number" min="0" step="1"${ro?" disabled":""}></div>
+       <div class="full"><button class="btn primary" type="submit"${ro?" disabled":""}>Registrar conversación</button> <span class="sub">Con monto, también se agrega a Negocio nuevo.</span></div></form>
+       <p class="sub">${contactsToday()} registrada(s) hoy.</p>`},
+    {t:"Pasar los cambios al pipeline",why:"El pipeline en Drive es la fuente oficial. Lo que cambiaste aquí debe quedar allá para que la gerencia lo vea.",
+     body:changes.length?`<ul class="list">${changes.map(id=>{const o=oppById(id)||{},ov=OV[id];return `<li class="sub"><b>${esc(id)}</b> ${esc(o.d||"")}: ${ov.st?"estado → "+({open:"abierta",won:"ganada",lost:"perdida"}[ov.st]||ov.st)+". ":""}${ov.p!=null?"probabilidad "+ov.p+"%. ":""}${ov.fc?"cierre "+fmtD(ov.fc)+".":""}</li>`}).join("")}</ul>
+       <label class="chk"><input type="checkbox" id="c-pipeline" data-chk="pipeline"${chk.pipeline?" checked":""}${ro?" disabled":""}> <span>Ya los pasé al pipeline.</span></label>`:'<p class="sub">Hoy no cambiaste estados, probabilidades ni fechas. Nada que pasar.</p>'},
+    {t:"Cierre del día",why:"Dos líneas. Lo que no se escribe no se mejora.",
+     body:`<div class="field"><label for="dTxt">Qué funcionó y qué me frenó hoy</label><textarea id="dTxt" maxlength="500"${ro?" disabled":""}>${esc((dd.cierre||{}).txt||"")}</textarea></div>
+       <div class="field"><label for="dComp">Mi compromiso para mañana</label><input id="dComp" maxlength="200" value="${esc((dd.cierre||{}).comp||"")}"${ro?" disabled":""}></div>
+       <div><button class="btn primary" type="button" id="dSave"${ro?" disabled":""}>Cerrar el día</button></div>`},
+  ];
+  let firstOpen=steps.findIndex((x,i)=>!s[i+1]);
+  $("steps").innerHTML=steps.map((x,i)=>{const k=i+1, locked=firstOpen>=0&&i>firstOpen, done=s[k]&&!locked, cur=i===firstOpen;
+    return `<li class="step${done?" done":""}${cur?" cur":""}${locked?" locked":""}"><div class="sh"><span class="n">${done?"✓":k}</span><div><h3>${x.t}</h3>${locked?'<span class="sub">Se desbloquea al terminar el paso anterior.</span>':""}</div><span class="chip ${done?"good":cur?"warn":""}">${done?"Listo":cur?"Ahora":locked?"Bloqueado":"Pendiente"}</span></div>
+      ${locked?"":`<div class="sb"><p class="why">${x.why}</p>${x.body}</div>`}</li>`}).join("");
+  if(ro&&!OWNER)$("steps").insertAdjacentHTML("afterbegin",'<li class="banner">Estás viendo la rutina de Miguel en modo lectura.</li>');
+  renderTodo(); renderWeek(c);
+}
+function renderTodo(){
+  const d=TODAY(); const items=Object.entries(OV).filter(([id,o])=>o.para&&o.accion).map(([id,o])=>({id,o,opp:oppById(id)})).filter(x=>x.opp&&stOf(x.opp)==="open"&&x.o.para<=addDays(d,7)).sort((a,b)=>a.o.para.localeCompare(b.o.para));
+  const over=items.filter(x=>x.o.para<d).length, tod=items.filter(x=>x.o.para===d).length;
+  $("todoNote").textContent=`${over} atrasada(s) · ${tod} para hoy`;
+  $("todo").innerHTML=items.length?items.map(x=>`<li><span class="chip ${x.o.para<d?"bad":x.o.para===d?"warn":""}">${x.o.para<d?"Atrasada":x.o.para===d?"Hoy":fmtD(x.o.para)}</span><div><b>${esc(x.o.accion)}</b><div class="sub">${esc(x.id)} · ${esc(x.opp.d)} · $${mm(x.opp.v)}</div></div></li>`).join(""):'<li class="sub">Sin tareas agendadas. Los próximos pasos que registres en la rutina aparecen aquí.</li>';
+  const b=over+tod; const tb=$("t-hoy"); tb.innerHTML="Hoy"+(b?`<span class="badge">${b}</span>`:"");
+}
+function addDays(s,n){const d=parseD(s);d.setDate(d.getDate()+n);return iso(d)}
+function dayComplete(k){const dd=DIAS[k];return !!(dd&&dd.complete)}
+function renderWeek(c){
+  const t=today(), ws=new Date(t); ws.setDate(t.getDate()-((t.getDay()+6)%7));
+  const names=["Lun","Mar","Mié","Jue","Vie"];
+  $("week").innerHTML=names.map((n,i)=>{const d=new Date(ws);d.setDate(ws.getDate()+i);const k=iso(d);const dd=DIAS[k];
+    const cls=dayComplete(k)?"full":dd&&dd.chk?"part":""; return `<span class="${cls}${k===TODAY()?" today":""}">${n}</span>`}).join("");
+  let streak=0; const x=new Date(t); if(!dayComplete(iso(x)))x.setDate(x.getDate()-1);
+  for(let i=0;i<120;i++){ if(isWeekday(x)){ if(dayComplete(iso(x)))streak++; else break;} x.setDate(x.getDate()-1)}
+  $("streak").textContent=streak?`Racha: ${streak} día(s) hábiles completos`:"Completa la rutina para iniciar tu racha";
+  const wk=iso(ws);
+  const contacts=Object.values(CONT).filter(x=>x.fecha>=wk).length;
+  const nuevosW=Object.values(NEW).filter(n=>n.at&&n.at.slice(0,10)>=wk);
+  const montoW=nuevosW.reduce((a,n)=>a+(+n.monto||0)*1e6,0);
+  const accW=Object.values(OV).filter(o=>o.accionAt&&o.accionAt.slice(0,10)>=wk).length;
+  $("score").innerHTML=`<div><span class="sub">Conversaciones</span><b class="num">${contacts}/5</b></div><div><span class="sub">Acciones registradas</span><b class="num">${accW}</b></div><div><span class="sub">Nuevo identificado</span><b class="num">$${mm(montoW)}</b><span class="sub">meta $${mm(c.weeklyQuote)} MM</span></div>`;
+}
+
+// ---------- TABLERO ----------
+function renderBar(c){
+  const total=Math.max(c.meta,c.base+c.marked+c.wt+c.newWt)||1, room=Math.max(0,c.meta-c.base-c.marked);
+  const parts=[["c-won",c.base,"Ganado 2026"],["c-mark",c.marked,"Marcado ganado aquí"],["c-wt",Math.min(c.wt,room),"Esperado del pipeline"],["c-new",Math.min(c.newWt,c.gapAfterPipe),"Negocio nuevo esperado"]].filter(p=>p[1]>0);
+  $("bar").innerHTML=parts.map(p=>`<span class="${p[0]}" style="width:${p[1]/total*100}%" title="${p[2]}: $${mm(p[1])} MM"></span>`).join("");
+  $("legend").innerHTML=parts.map(p=>`<span><i class="${p[0]}"></i>${p[2]} <span class="num">$${mm(p[1])}</span></span>`).join("")+(c.gapFinal>0?`<span><i style="background:var(--steel-soft);border:1px solid var(--line)"></i>Sin cubrir <span class="num">$${mm(c.gapFinal)}</span></span>`:"");
+  $("barNote").textContent=c.meta?`${Math.min(100,Math.round((c.meta-c.gapFinal)/c.meta*100))}% de $${mm(c.meta)} MM cubierto`:"";
+}
+function weekStart(d){const x=new Date(d);x.setDate(x.getDate()-((x.getDay()+6)%7));x.setHours(12,0,0,0);return x}
+function renderForecast(c){
+  const t=today(), w0=weekStart(t), wEnd=weekStart(DEADLINE); const weeks=[];
+  for(let d=new Date(w0);d<=wEnd;d.setDate(d.getDate()+7))weeks.push({s:new Date(d),pipe:0,nw:0});
+  if(!weeks.length)return;
+  const idx=dt=>Math.max(0,Math.min(weeks.length-1,Math.floor(days(w0,weekStart(dt))/7)));
+  c.opens.forEach(o=>{if(stOf(o)!=="open"||!isCounted(o,c.opens))return;weeks[idx(parseD(fcOf(o).d))].pipe+=o.v*prOf(o)/100});
+  Object.values(NEW).forEach(n=>{const d=parseD(n.fc)||new Date(2026,11,10,12);weeks[idx(d)].nw+=(+n.monto||0)*1e6*((n.p==null?50:+n.p)/100)});
+  let cum=0; weeks.forEach(w=>{cum+=w.pipe+w.nw;w.cum=cum});
+  const need=c.remaining, n=weeks.length, W=760,H=230,pl=40,pr=10,pt=14,pb=34;
+  const maxCum=Math.max(need,cum,1), bw=(W-pl-pr)/n, yB=v=>H-pb-v/maxCum*(H-pt-pb);
+  const r=maxCum/1e6/4, p10=Math.pow(10,Math.floor(Math.log10(r||1))), step=[1,2,2.5,5,10].map(k=>k*p10).find(k=>k>=r)*1e6;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Pronóstico semanal">`;
+  for(let v=0;v<=maxCum+1;v+=step){const y=yB(v);s+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-6}" y="${y+3}" text-anchor="end">${Math.round(v/1e6)}</text>`}
+  weeks.forEach((w,i)=>{const x=pl+i*bw+bw*.18,bwi=bw*.64,hp=w.pipe/maxCum*(H-pt-pb),hn=w.nw/maxCum*(H-pt-pb);
+    if(hp>0)s+=`<rect x="${x}" y="${H-pb-hp}" width="${bwi}" height="${hp}" fill="var(--steel)" rx="1"><title>Pipeline ${mm(w.pipe)} MM</title></rect>`;
+    if(hn>0)s+=`<rect x="${x}" y="${H-pb-hp-hn}" width="${bwi}" height="${hn}" fill="var(--accent)" rx="1"><title>Negocio nuevo ${mm(w.nw)} MM</title></rect>`;
+    s+=`<text x="${x+bwi/2}" y="${H-pb+14}" text-anchor="middle">${w.s.getDate()}/${w.s.getMonth()+1}</text>`});
+  s+=`<text x="${pl}" y="${H-4}">semana que parte el…</text><line x1="${pl}" y1="${yB(0)}" x2="${W-pr}" y2="${yB(need)}" stroke="var(--bad)" stroke-dasharray="5 4" stroke-width="1.5"/>`;
+  s+=`<polyline points="${pl},${yB(0)} ${weeks.map((w,i)=>`${pl+(i+1)*bw},${yB(w.cum)}`).join(" ")}" fill="none" stroke="var(--good)" stroke-width="2.2"/>`;
+  const lx=pl+n*bw, ly=yB(cum);
+  s+=`<circle cx="${lx}" cy="${ly}" r="3.5" fill="var(--good)"/><text x="${W-pr}" y="${Math.max(pt+8,yB(need)-6)}" text-anchor="end" style="fill:var(--bad)">necesario ${mm(need)}</text><text x="${lx-6}" y="${ly+(ly>yB(need)?14:-6)}" text-anchor="end" style="fill:var(--good)">esperado ${mm(cum)}</text>`;
+  $("fcChart").innerHTML=s+"</svg>";
+  const k=Math.min(n,4), needK=need*(k/n), haveK=weeks.slice(0,k).reduce((a,w)=>a+w.pipe+w.nw,0), diff=haveK-needK;
+  $("fcNote").innerHTML=`<span class="legend" style="margin:0 0 6px"><span><i class="c-wt"></i>Pipeline</span><span><i class="c-new"></i>Negocio nuevo</span><span><i style="background:var(--good)"></i>Acumulado esperado</span><span><i style="background:var(--bad)"></i>Ritmo necesario</span></span>`+(need<=0?"La meta ya está cubierta.":`Próximas ${k} semanas: esperas <b class="num">$${mm(haveK)} MM</b> y el ritmo pide <b class="num">$${mm(needK)} MM</b>. ${diff>=0?`Vas <b style="color:var(--good)">adelantado $${mm(diff)} MM</b>.`:`Vas <b style="color:var(--bad)">atrasado $${mm(-diff)} MM</b>: adelanta cierres o fija fechas reales.`}`);
+}
+function renderAlerts(c){
+  const o=c.opens.filter(x=>stOf(x)==="open"), al=[];
+  const at100=o.filter(x=>x.p===100); if(at100.length)al.push([`${at100.length} ofertas al 100% siguen abiertas.`,`Suman $${mm(at100.reduce((a,x)=>a+x.v,0))} MM. Si tienen OC, pásalas a ganada en el pipeline.`]);
+  const cold=o.filter(x=>x.f&&days(parseD(x.f),today())>60).sort((a,b)=>b.v-a.v); if(cold.length)al.push([`${cold.length} ofertas con más de 60 días.`,`La mayor es ${esc(cold[0].d)} ($${mm(cold[0].v)} MM).`]);
+  const nov=o.filter(x=>!x.v); if(nov.length)al.push([`${nov.length} sin monto.`,nov.map(x=>esc(x.id)).join(", ")]);
+  const g={}; o.forEach(x=>{const k=groupOf(x);if(k)(g[k]=g[k]||[]).push(x)}); const gs=Object.values(g).filter(a=>a.length>1);
+  if(gs.length)al.push(["Cotizaciones alternativas.",`${gs.length} sitios con varias versiones. Solo cuenta la de mayor monto.`]);
+  const w100=c.won.filter(x=>x.mg>=100); if(w100.length)al.push(["Margen de 100% en ganadas.",`${w100.map(x=>esc(x.id)).join(", ")}: falta el costo.`]);
+  if(DIFFS.length)al.push([`${DIFFS.length} diferencias entre pipeline y monday.`,"Detalle en la pestaña Sincronización."]);
+  $("alerts").innerHTML=al.map(a=>`<li><b>${a[0]}</b> ${a[1]}</li>`).join("")||'<li class="sub">Sin alertas.</li>';
+}
+function renderChart(c){
+  const names=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"], last=today().getMonth();
+  const months=names.slice(0,last+1).map((n,i)=>[n,c.won.filter(o=>o.fc&&+o.fc.slice(5,7)===i+1).reduce((a,o)=>a+o.v,0)]);
+  const W=320,H=150,pl=28,pb=20,pt=12,max=Math.max(100,Math.ceil(Math.max(...months.map(m=>m[1]))/1e8)*100),bw=(W-pl-6)/months.length;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ganado por mes">`;
+  [0,max/2,max].forEach(t=>{const y=H-pb-(t/max)*(H-pb-pt);s+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" stroke="var(--line)"/><text x="${pl-4}" y="${y+3}" text-anchor="end">${t}</text>`});
+  months.forEach((m,i)=>{const v=m[1]/1e6,h=v/max*(H-pb-pt),x=pl+i*bw+2;s+=`<rect x="${x}" y="${H-pb-h}" width="${Math.max(2,bw-4)}" height="${h}" rx="2" fill="var(--steel)"><title>${m[0]}: ${mm(m[1])} MM</title></rect><text x="${x+(bw-4)/2}" y="${H-6}" text-anchor="middle">${m[0]}</text>`;if(v>=30)s+=`<text x="${x+(bw-4)/2}" y="${H-pb-h-3}" text-anchor="middle">${Math.round(v)}</text>`});
+  $("chart").innerHTML=s+"</svg>";
+}
+function renderTablero(c){
+  $("meta").value=PLAN.meta; $("mNew").setAttribute("aria-pressed",PLAN.mode==="new"); $("mAcc").setAttribute("aria-pressed",PLAN.mode==="acc");
+  $("bPip").setAttribute("aria-pressed",PLAN.base!=="monday"); $("bMon").setAttribute("aria-pressed",PLAN.base==="monday");
+  renderBar(c); renderForecast(c); renderAlerts(c); renderChart(c);
+}
+// ---------- OPORTUNIDADES ----------
+function rowSortVal(o){const p=prOf(o)/100;switch(sortKey){case "v":return -o.v;case "eu":return -(o.v*(o.mg||0)/100*p);case "age":return o.f?-days(parseD(o.f),today()):0;case "fc":return parseD(fcOf(o).d)-0;default:return -(o.v*p)}}
+function renderOps(c){
+  const cur=$("fCli").value||"all", clis=["all",...new Set(c.opens.map(o=>o.c))];
+  $("fCli").innerHTML=clis.map(x=>`<option value="${esc(x)}"${x===cur?" selected":""}>${x==="all"?"Todos los clientes":esc(x)}</option>`).join("");
+  const fc=$("fCli").value, fe=$("fEst").value; let list=c.opens.filter(o=>fc==="all"||o.c===fc);
+  if(fe==="cold")list=list.filter(o=>o.f&&days(parseD(o.f),today())>60&&stOf(o)==="open"); else if(fe==="noact")list=list.filter(o=>stOf(o)==="open"&&!(OV[o.id]&&OV[o.id].accion)); else if(fe!=="all")list=list.filter(o=>o.est===fe);
+  list.sort((a,b)=>rowSortVal(a)-rowSortVal(b));
+  document.querySelectorAll("th button[data-sort]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.sort===sortKey));
+  const dis=CANWRITE?"":" disabled";
+  $("rows").innerHTML=list.map(o=>{const st=stOf(o),counted=isCounted(o,c.opens),ov=OV[o.id]||{},p=prOf(o)/100,f=fcOf(o),live=counted&&st==="open";
+    const fl=[]; if(o.est!=="OFERTADA")fl.push(`<span class="chip">${esc(o.est)}</span>`); if(groupOf(o)&&!counted)fl.push('<span class="chip warn">Variante, no suma</span>');
+    if(o.p===100&&st==="open")fl.push('<span class="chip warn">100% sin cerrar</span>'); if(!o.v)fl.push('<span class="chip bad">Sin monto</span>'); if(o.src==="mon"&&DRIVEROWS)fl.push('<span class="chip bad">No está en el pipeline</span>');
+    const age=o.f?days(parseD(o.f),today()):null;
+    return `<tr class="${st==="won"?"is-won":st==="lost"?"is-lost":""}"><td class="num sub">${esc(o.id.replace("PRO2026",""))}</td>
+      <td style="min-width:320px"><div class="det">${esc(o.d||"(sin detalle)")}</div><div class="sub">${esc(o.m||"—")} · env. ${fmtD(o.f)} ${fl.join(" ")}</div>
+      <div class="act"><input id="a-${esc(o.id)}" data-id="${esc(o.id)}" data-f="accion" value="${esc(ov.accion||"")}" placeholder="Próxima acción y con quién" maxlength="160" aria-label="Próxima acción ${esc(o.id)}"${dis}><input type="date" id="pa-${esc(o.id)}" data-id="${esc(o.id)}" data-f="para" value="${esc(ov.para||"")}" aria-label="Para cuándo ${esc(o.id)}"${dis}><span class="when">${ov.accionAt?fmtD(ov.accionAt.slice(0,10)):""}</span></div></td>
+      <td>${esc(o.c)}</td><td class="r num">${mm(o.v)}</td><td class="r num sub">${o.mg==null?"—":String(o.mg).replace('.',',')+"%"}</td>
+      <td class="r"><input type="number" min="0" max="100" step="5" id="p-${esc(o.id)}" data-id="${esc(o.id)}" data-f="p" value="${prOf(o)}" aria-label="Probabilidad ${esc(o.id)}"${dis}></td>
+      <td class="r num">${live?mm(o.v*p):"—"}</td><td class="r num">${live&&o.mg!=null&&o.mg<100?mm(o.v*o.mg/100*p):"—"}</td>
+      <td class="r">${age==null?'<span class="sub">—</span>':`<span class="chip ${age>60?"bad":age>30?"warn":"good"} num">${age}</span>`}</td>
+      <td><input type="date" id="f-${esc(o.id)}" data-id="${esc(o.id)}" data-f="fc" value="${f.d}" class="${f.est?"est":""}" aria-label="Cierre estimado ${esc(o.id)}"${dis}></td>
+      <td><select id="s-${esc(o.id)}" data-id="${esc(o.id)}" data-f="st" aria-label="Estado ${esc(o.id)}"${dis}><option value="open"${st==="open"?" selected":""}>Abierta</option><option value="won"${st==="won"?" selected":""}>Ganada</option><option value="lost"${st==="lost"?" selected":""}>Perdida</option></select></td></tr>`}).join("")||'<tr><td colspan="11" class="sub">No hay oportunidades con este filtro.</td></tr>';
+  const cold=c.opens.filter(o=>stOf(o)==="open"&&o.f&&days(parseD(o.f),today())>60).length, noact=c.opens.filter(o=>stOf(o)==="open"&&!(OV[o.id]&&OV[o.id].accion)).length;
+  $("rowsNote").textContent=`${c.opens.length} abiertas · ${cold} con más de 60 días · ${noact} sin próxima acción.`;
+}
+// ---------- NEGOCIO NUEVO ----------
+function renderNuevo(c){
+  const news=Object.entries(NEW), per=c.gapAfterPipe/LEVERS.length;
+  if(!$("nPal").options.length)$("nPal").innerHTML=LEVERS.map(l=>`<option value="${l.k}">${l.t}</option>`).join("");
+  $("levers").innerHTML=LEVERS.map(l=>{const mine=news.filter(([,n])=>n.pal===l.k), ident=mine.reduce((a,[,n])=>a+(+n.monto||0)*1e6,0), target=per/0.5, pc=target?Math.min(100,ident/target*100):100;
+    return `<div class="lever"><div class="lv-head"><h3>${l.t}</h3><span class="sub num">$${mm(ident)} / ${mm(target)} MM</span></div><p class="sub">${l.d}</p><div class="meter" role="img" aria-label="Identificado vs objetivo"><span style="width:${pc}%"></span></div>
+      ${mine.map(([id,n])=>`<div class="nitem"><div><div class="t">${esc(n.cli)} · ${esc(n.det)}</div><div class="sub">${esc(n.con||"sin contacto")} · ${n.p==null?50:n.p}% · cierre ${fmtD(n.fc)}</div></div><div style="text-align:right"><div class="num">$${mm((+n.monto||0)*1e6)}</div>${CANWRITE?`<span class="confirm"><button class="btn danger" type="button" data-ask="${esc(id)}">Quitar</button></span>`:""}</div></div>`).join("")}</div>`}).join("");
+  $("newTotal").textContent=`$${mm(c.newIdent)} MM identificado · $${mm(c.newWt)} MM esperado`;
+  $("nform").hidden=!CANWRITE;
+}
+// ---------- SYNC ----------
+function renderSync(){
+  if(!CUADRE){$("cuadreNote").textContent=SRC.drv.st==="ok"?"Esperando datos de monday…":"Se calcula cuando el pipeline y monday responden.";$("cuadreKpi").innerHTML="";$("cuadreRows").innerHTML="";}
+  else{
+    const d=CUADRE.dW-CUADRE.mW;
+    $("cuadreNote").textContent=`Diferencia: $${mm(d)} MM`;
+    $("cuadreKpi").innerHTML=`<div><span class="sub">Pipeline (KAM MVera, ganada 2026)</span><b class="num">$${mm(CUADRE.dW)} MM</b><span class="sub">${CUADRE.nd} filas</span></div><div><span class="sub">monday (vendedor M. Vera, PRO2026 ganadas)</span><b class="num">$${mm(CUADRE.mW)} MM</b><span class="sub">${CUADRE.nm} ofertas</span></div><div><span class="sub">Explicado por las filas de abajo</span><b class="num">$${mm(CUADRE.rows.reduce((a,r)=>a+r.vd-r.vm,0))} MM</b></div>`;
+    $("cuadreRows").innerHTML=CUADRE.rows.map(r=>`<tr><td class="num sub">${esc(r.id)}</td><td>${esc(r.d||"")}</td><td class="r num">${r.vd?mm(r.vd):"—"}</td><td class="r num">${r.vm?mm(r.vm):"—"}</td><td class="sub">${esc(r.mot)}</td></tr>`).join("")||'<tr><td colspan="5" class="sub">Pipeline y monday cuadran.</td></tr>';
+  }
+  $("diffRows").innerHTML=DIFFS.length?DIFFS.map(x=>`<tr><td class="num sub">${esc(x.id)}</td><td>${esc(x.d||"")}</td><td><span class="chip warn">${esc(x.k)}</span></td><td class="sub">${esc(x.a)}</td><td class="sub">${esc(x.b)}</td></tr>`).join(""):`<tr><td colspan="5" class="sub">${DRIVEROWS&&MONITEMS?"Sin diferencias.":"Se calcula cuando el pipeline y monday responden."}</td></tr>`;
+  const sb=$("t-sync"); sb.innerHTML="Sincronización"+(DIFFS.length?`<span class="badge">${DIFFS.length}</span>`:"");
+}
+// ---------- MÉTODO ----------
+function renderMetodo(c){
+  $("lessons").innerHTML=LESSONS.map((l,i)=>`<article class="lesson" id="l-${l.k}"><span class="eyebrow">Lección ${i+1}</span><h3>${esc(l.t)}</h3><p>${esc(l.short)}</p><ul>${l.pts.map(p=>`<li>${esc(p).replace("{GAP}","$"+mm(c.gapAfterPipe)+" MM").replace("{WQ}","$"+mm(c.weeklyQuote)+" MM")}</li>`).join("")}</ul><div class="apply"><b>Aplícalo hoy:</b> ${esc(l.apply)}</div>${l.v.length?`<div class="vids">${l.v.map(v=>`<a class="vid" href="${esc(v.u)}" target="_blank" rel="noopener"><span class="play"></span>${esc(v.t)}</a>`).join("")}</div>`:""}</article>`).join("");
+}
+// ---------- render all ----------
+function renderAll(){const c=calc();renderStatus();renderStrip(c);
+  if(TAB==="hoy")renderHoy(); else {renderTodo();}
+  if(TAB==="tablero")renderTablero(c); if(TAB==="ops")renderOps(c); if(TAB==="nuevo")renderNuevo(c); if(TAB==="metodo")renderMetodo(c); renderSync();
+}
+function setTab(t){TAB=t;document.querySelectorAll("nav.tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  document.querySelectorAll("[role=tabpanel]").forEach(p=>p.hidden=p.id!=="p-"+t); try{localStorage.setItem("pc-tab",t)}catch(e){} renderAll()}
+
+// ---------- persistence (API propia) ----------
+let QUEUE=[]; try{QUEUE=JSON.parse(localStorage.getItem(QUEUE_KEY)||"[]")}catch(e){}
+let flushing=false;
+function saveQueue(){try{localStorage.setItem(QUEUE_KEY,JSON.stringify(QUEUE))}catch(e){}}
+function enqueue(op,col,id,data){QUEUE=QUEUE.filter(x=>!(x.col===col&&x.id===id));QUEUE.push({op,col,id,data});saveQueue();cacheState();flush()}
+async function flush(){
+  if(flushing||!QUEUE.length||!CFG)return; flushing=true;
+  const batch=QUEUE.slice(0,40);
+  try{
+    const r=await fetch(CFG.api,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify({key:CFG.key,ops:batch})});
+    const j=await r.json(); if(j.error)throw new Error(j.error);
+    QUEUE=QUEUE.filter(x=>!batch.includes(x)); saveQueue(); showBanner("");
+  }catch(err){ showBanner(navigator.onLine?"No se pudo guardar en el servidor; se reintentará solo. "+(err.message==="clave"?"La clave no es válida: revisa la configuración.":""):"Sin conexión: tus cambios se guardan en este equipo y se enviarán al volver la señal.") }
+  finally{flushing=false; renderStatus(); if(QUEUE.length)setTimeout(flush,15000)}
+}
+function showBanner(t,bad){const b=$("saveBanner");b.textContent=t;b.hidden=!t;b.classList.toggle("bad",!!bad)}
+const stamp=()=>({at:new Date().toISOString()});
+function savePlan(){enqueue("set","config","plan",{...PLAN,...stamp()})}
+function saveOv(id){const d={...OV[id],...stamp()};OV[id]=d;enqueue("set","ofertas",id,d)}
+function saveDay(patch){const k=TODAY();const d={...(DIAS[k]||{}),...patch};d.complete=stepStateFor(d);DIAS[k]={...d,...stamp()};enqueue("set","dias",k,DIAS[k])}
+function stepStateFor(d){const saved=DIAS[TODAY()];DIAS[TODAY()]=d;const c=calc();const s=stepState(d.plan||autoPlan(c));DIAS[TODAY()]=saved;return [1,2,3,4,5,6].every(i=>s[i])}
+const newId=p=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+function addNew(n){const id=newId("n");NEW[id]=n;enqueue("set","nuevos",id,n)}
+function delNew(id){delete NEW[id];enqueue("delete","nuevos",id,null)}
+function addCont(x){const id=newId("c");CONT[id]=x;enqueue("set","contactos",id,x)}
+function cacheState(){try{localStorage.setItem(CACHE_KEY,JSON.stringify({at:SRC.lastAt||null,pipeline:LASTRAW.pipeline,monday:LASTRAW.monday,state:{config:{plan:PLAN},ofertas:OV,nuevos:NEW,contactos:CONT,dias:DIAS}}))}catch(e){}}
+// ---------- events ----------
+document.querySelector("nav.tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(b)setTab(b.dataset.tab)});
+document.addEventListener("click",e=>{const g=e.target.closest("[data-goto]");if(g){setTab(g.dataset.goto);const L=dayDoc().plan;if(L){setTimeout(()=>{const el=$("l-"+L.lesson);if(el)el.scrollIntoView({behavior:"smooth"})},50)}}});
+$("meta").addEventListener("change",e=>{PLAN.meta=Math.max(0,+e.target.value||0);savePlan();renderAll()});
+$("mNew").onclick=()=>{PLAN.mode="new";savePlan();renderAll()}; $("mAcc").onclick=()=>{PLAN.mode="acc";savePlan();renderAll()};
+$("bPip").onclick=()=>{PLAN.base="pipeline";savePlan();renderAll()}; $("bMon").onclick=()=>{PLAN.base="monday";savePlan();renderAll()};
+$("fCli").onchange=()=>renderOps(calc()); $("fEst").onchange=()=>renderOps(calc());
+document.querySelectorAll("th button[data-sort]").forEach(b=>b.onclick=()=>{sortKey=b.dataset.sort;renderOps(calc())});
+function ovChange(id,f,val){OV[id]={...(OV[id]||{})};
+  if(f==="accion"){OV[id].accion=val.trim();OV[id].accionAt=new Date().toISOString()} else if(f==="para")OV[id].para=val; else if(f==="p")OV[id].p=val===""?null:Math.max(0,Math.min(100,+val)); else OV[id][f]=val;
+  saveOv(id)}
+$("rows").addEventListener("change",e=>{const id=e.target.dataset.id,f=e.target.dataset.f;if(!id||!f)return;ovChange(id,f,e.target.value);renderAll()});
+$("steps").addEventListener("change",e=>{const t=e.target;
+  if(t.dataset.chk){const dd=dayDoc();saveDay({chk:{...(dd.chk||{}),[t.dataset.chk]:t.checked}});renderAll();return}
+  if(t.dataset.id&&t.dataset.f){ovChange(t.dataset.id,t.dataset.f,t.value);saveDay({});renderAll()}});
+$("steps").addEventListener("click",e=>{const b=e.target.closest("button[data-res]");
+  if(b){const id=b.dataset.id,r=b.dataset.res,dd=dayDoc();saveDay({res:{...(dd.res||{}),[id]:{r,at:new Date().toISOString()}}});
+    if(r==="cae"){OV[id]={...(OV[id]||{}),st:"lost"};saveOv(id)} if(r==="oc"&&prOf(oppById(id)||{})<90){OV[id]={...(OV[id]||{}),p:90};saveOv(id)}
+    renderAll(); setTimeout(()=>{const i=$("na-"+id);if(i&&!i.value)i.focus()},30); return}
+  if(e.target.id==="dSave"){const txt=$("dTxt").value.trim(),comp=$("dComp").value.trim();if(!txt||!comp){showBanner("Escribe las dos líneas para cerrar el día.");return}showBanner("");saveDay({cierre:{txt,comp}});renderAll()}});
+$("steps").addEventListener("submit",e=>{if(e.target.id!=="cform")return;e.preventDefault();
+  const x={fecha:TODAY(),cli:$("cCli").value,per:$("cPer").value.trim(),res:$("cRes").value.trim(),pal:$("cPal").value,...stamp()};
+  if(!x.per||!x.res)return; addCont(x);
+  const m=+$("cMon").value; if(m>0)addNew({pal:x.pal,cli:x.cli,det:x.res.slice(0,140),con:x.per,monto:m,p:30,fc:"",...stamp()});
+  saveDay({}); renderAll()});
+$("levers").addEventListener("click",e=>{const ask=e.target.dataset.ask,yes=e.target.dataset.yes,no=e.target.dataset.no;
+  if(ask){e.target.parentElement.innerHTML=`<span>¿Quitar?</span><button class="btn danger" type="button" data-yes="${esc(ask)}">Sí</button><button class="btn" type="button" data-no="1">No</button>`}
+  else if(yes){delNew(yes);renderAll()} else if(no)renderAll()});
+$("nform").addEventListener("submit",e=>{e.preventDefault();
+  const n={pal:$("nPal").value,cli:$("nCli").value,det:$("nDet").value.trim(),con:$("nCon").value.trim(),monto:Math.max(0,+$("nMon").value||0),p:$("nPro").value===""?50:Math.max(0,Math.min(100,+$("nPro").value)),fc:$("nFec").value||"",...stamp()};
+  if(!n.det||!n.monto){$("nMsg").textContent="Escribe el proyecto y su monto.";return}
+  addNew(n);["nDet","nCon","nMon","nFec"].forEach(i=>$(i).value="");$("nMsg").textContent="Agregada.";saveDay({});renderAll()});
+
+// ---------- boot ----------
+let LASTRAW={pipeline:null,monday:null};
+function applyPayload(j,fromCache){
+  LASTRAW={pipeline:j.pipeline,monday:j.monday};
+  try{DRIVEROWS=normPipeline(j.pipeline);SRC.drv={st:"ok",at:j.at}}catch(e){DRIVEROWS=null;SRC.drv={st:"err",msg:(j.pipeline&&j.pipeline.error)||"no se pudo leer"}}
+  try{MONITEMS=normMonday(j.monday);SRC.mon={st:"ok",at:j.at}}catch(e){MONITEMS=null;SRC.mon={st:"err",msg:(j.monday&&j.monday.error)||"no se pudo leer"}}
+  if(fromCache){if(SRC.drv.st==="ok")SRC.drv.st="cache";if(SRC.mon.st==="ok")SRC.mon.st="cache"}
+  const st=j.state||{};
+  // lo que está en la cola local manda sobre lo que trae el servidor
+  const pend=c=>Object.fromEntries(QUEUE.filter(q=>q.col===c&&q.op==="set").map(q=>[q.id,q.data]));
+  const del=c=>new Set(QUEUE.filter(q=>q.col===c&&q.op==="delete").map(q=>q.id));
+  const merge=c=>{const o={...(st[c]||{}),...pend(c)};del(c).forEach(id=>delete o[id]);return o};
+  const pl=merge("config").plan; if(pl)PLAN={meta:pl.meta??900,mode:pl.mode||"new",base:pl.base||"pipeline"};
+  OV=merge("ofertas");NEW=merge("nuevos");CONT=merge("contactos");DIAS=merge("dias");
+  SRC.lastAt=j.at; rebuild(); renderAll(); cacheState(); notifyIfDue();
+}
+async function load(fresh){
+  if(!CFG)return;
+  const b=$("refresh"); if(b){b.disabled=true;b.textContent="Sincronizando…"}
+  try{
+    const r=await fetch(CFG.api+"?action=all&key="+encodeURIComponent(CFG.key)+(fresh?"&fresh=1":""),{cache:"no-store"});
+    const j=await r.json(); if(j.error)throw new Error(j.error);
+    applyPayload(j,false); flush();
+  }catch(e){
+    const msg=e.message==="clave"?"clave no válida":navigator.onLine?"servidor no responde":"sin conexión";
+    if(SRC.drv.st!=="ok")SRC.drv={st:"err",msg}; if(SRC.mon.st!=="ok")SRC.mon={st:"err",msg};
+    if(e.message==="clave")showSetup("La clave no es válida. Vuelve a abrir el enlace de configuración que te llegó por correo.");
+    renderStatus();
+  }finally{if(b){b.disabled=false;b.textContent="Sincronizar ahora"}}
+}
+// ---------- configuración ----------
+function readCfgFromHash(){
+  const m=location.hash.match(/cfg=([A-Za-z0-9_\-=]+)/); if(!m)return false;
+  try{const s=atob(m[1].replace(/-/g,"+").replace(/_/g,"/"));const c=JSON.parse(s);if(c.api&&c.key){CFG=c;localStorage.setItem(CFG_KEY,JSON.stringify(c))}}catch(e){}
+  history.replaceState(null,"",location.pathname+location.search); return !!CFG;
+}
+function showSetup(msg){
+  $("setup").hidden=false; $("setupMsg").textContent=msg||"";
+  if(CFG){$("sApi").value=CFG.api;$("sKey").value=CFG.key}
+}
+$("setupForm").addEventListener("submit",e=>{e.preventDefault();
+  const api=$("sApi").value.trim(), key=$("sKey").value.trim();
+  if(!/^https:\/\/script\.google\.com\/.+\/exec$/.test(api)){$("setupMsg").textContent="La dirección debe empezar con https://script.google.com/ y terminar en /exec.";return}
+  if(key.length<20){$("setupMsg").textContent="La clave es más larga; cópiala completa.";return}
+  CFG={api,key}; try{localStorage.setItem(CFG_KEY,JSON.stringify(CFG))}catch(err){}
+  $("setup").hidden=true; load(true);
+});
+$("openSetup").onclick=()=>showSetup("");
+$("closeSetup").onclick=()=>{if(CFG)$("setup").hidden=true};
+// ---------- avisos en el equipo ----------
+async function notifyIfDue(){
+  try{
+    if(!("Notification" in window)||Notification.permission!=="granted")return;
+    const d=TODAY(), key="plan-cierre-aviso-"+d; if(localStorage.getItem(key))return;
+    const due=Object.values(OV).filter(o=>o.para&&o.accion&&o.para<=d&&o.st!=="lost"&&o.st!=="won").length;
+    const n=dayProgress().n;
+    const body=(due?`${due} tarea(s) para hoy o atrasadas. `:"")+(n<6?`Rutina: ${n} de 6 pasos.`:"Rutina completa.");
+    const reg=await navigator.serviceWorker?.getRegistration();
+    if(reg&&reg.showNotification)await reg.showNotification("Plan de cierre",{body,icon:"icon-192.png",tag:"plan-dia"});
+    else new Notification("Plan de cierre",{body,icon:"icon-192.png"});
+    localStorage.setItem(key,"1");
+  }catch(e){}
+}
+function renderNotifBtn(){
+  const b=$("notifBtn"); if(!b)return;
+  if(!("Notification" in window)){b.hidden=true;$("notifNote").textContent="Este equipo no permite avisos de la app; te llegan por correo.";return}
+  b.hidden=Notification.permission!=="default";
+  $("notifNote").textContent=Notification.permission==="granted"?"Avisos activados en este equipo: al abrir la app te dice qué tienes pendiente.":Notification.permission==="denied"?"Bloqueaste los avisos en este equipo; actívalos en la configuración del navegador.":"";
+}
+document.addEventListener("click",async e=>{if(e.target.id==="notifBtn"){try{await Notification.requestPermission()}catch(err){} renderNotifBtn(); notifyIfDue()}});
+// ---------- arranque ----------
+lsTab();
+function lsTab(){try{const t=localStorage.getItem("pc-tab");if(t&&$("p-"+t))TAB=t}catch(e){}}
+readCfgFromHash();
+try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");if(c&&c.pipeline!==undefined)applyPayload(c,true)}catch(e){}
+setTab(TAB); renderNotifBtn();
+if(!CFG)showSetup(""); else load(false);
+setInterval(()=>{if(document.visibilityState==="visible")load(false)},300000);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load(false)});
+window.addEventListener("online",()=>{flush();load(false)});
+$("refresh").onclick=()=>load(true);
+if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+
+</body>
+</html>
