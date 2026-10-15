@@ -63,8 +63,9 @@ function setup() {
 
 /** Envía por correo el enlace que configura la app en cada equipo (ejecutar después de implementar). */
 function enviarEnlaceConfiguracion() {
-  const api = ScriptApp.getService().getUrl();
+  const api = prop_('WEBAPP_URL') || ScriptApp.getService().getUrl();
   if (!api) throw new Error('Primero implementa el proyecto como aplicación web.');
+  if (!/\/exec$/.test(api)) throw new Error('La dirección no termina en /exec. Copia la URL de la aplicación web desde Implementar › Gestionar implementaciones y guárdala en Propiedades del script como WEBAPP_URL; luego vuelve a ejecutar esta función.');
   const cfg = Utilities.base64EncodeWebSafe(JSON.stringify({ api: api, key: prop_('API_KEY') }));
   const link = CFG.appUrl + '#cfg=' + cfg;
   const html = '<p>Abre este enlace en cada equipo (Mac, Windows, iPhone y Honor) para dejar la app configurada:</p>' +
