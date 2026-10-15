@@ -827,11 +827,16 @@ async function load(fresh){
   if(!CFG)return;
   const b=$("refresh"); if(b){b.disabled=true;b.textContent="Sincronizando…"}
   try{
-    const r=await fetch(CFG.api+"?action=all&key="+encodeURIComponent(CFG.key)+(fresh?"&fresh=1":""),{cache:"no-store"});
-    const j=await r.json(); if(j.error)throw new Error(j.error);
+    let r; try{r=await fetch(CFG.api+"?action=all&key="+encodeURIComponent(CFG.key)+(fresh?"&fresh=1":""),{cache:"no-store"})}
+    catch(netErr){throw new Error(navigator.onLine?"bloqueado":"offline")}
+    const txt=await r.text(); let j; try{j=JSON.parse(txt)}catch(pe){throw new Error("login")}
+    if(j.error)throw new Error(j.error);
     applyPayload(j,false); flush();
   }catch(e){
-    const msg=e.message==="clave"?"clave no válida":navigator.onLine?"servidor no responde":"sin conexión";
+    const M={clave:"clave no válida",offline:"sin conexión",login:"el servidor pide iniciar sesión",bloqueado:"el servidor no permite la conexión"};
+    const msg=M[e.message]||"servidor no responde: "+e.message;
+    if((e.message==="login"||e.message==="bloqueado")&&!/\/exec$/.test(CFG.api))showSetup("La dirección guardada no es la de la implementación: debe terminar en /exec. Cópiala desde Apps Script › Implementar › Gestionar implementaciones.");
+    else if(e.message==="login"||e.message==="bloqueado")showSetup("El servidor no deja entrar a la app. En Apps Script › Implementar › Gestionar implementaciones, revisa que \"Quién tiene acceso\" sea \"Cualquier usuario\" y que la dirección de abajo sea la URL de la aplicación web (termina en /exec).");
     if(SRC.drv.st!=="ok")SRC.drv={st:"err",msg}; if(SRC.mon.st!=="ok")SRC.mon={st:"err",msg};
     if(e.message==="clave")showSetup("La clave no es válida. Vuelve a abrir el enlace de configuración que te llegó por correo.");
     renderStatus();
@@ -846,6 +851,7 @@ function readCfgFromHash(){
 function showSetup(msg){
   $("setup").hidden=false; $("setupMsg").textContent=msg||"";
   if(CFG){$("sApi").value=CFG.api;$("sKey").value=CFG.key}
+  $("setup").scrollIntoView({behavior:"smooth",block:"start"});
 }
 $("setupForm").addEventListener("submit",e=>{e.preventDefault();
   const api=$("sApi").value.trim(), key=$("sKey").value.trim();
