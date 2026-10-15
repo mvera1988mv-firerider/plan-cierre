@@ -893,6 +893,7 @@ try{const c=JSON.parse(localStorage.getItem(CACHE_KEY)||"null");if(c&&c.pipeline
 setTab(TAB); renderNotifBtn();
 if(!CFG)showSetup(""); else load(false);
 setInterval(()=>{if(document.visibilityState==="visible")load(false)},300000);
+window.addEventListener("hashchange",()=>{if(readCfgFromHash()){$("setup").hidden=true;load(true)}});
 document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")load(false)});
 window.addEventListener("online",()=>{flush();load(false)});
 $("refresh").onclick=()=>load(true);
